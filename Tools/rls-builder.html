@@ -1,0 +1,2250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RLS Builder — Resource Loading Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root {
+    --navy:    #1a2744;
+    --navy2:   #2d3f6b;
+    --blue:    #3b6fd4;
+    --orange:  #e06c10;
+    --bg:      #edf0f7;
+    --card:    #ffffff;
+    --border:  #d2d8e8;
+    --muted:   #6b7a99;
+    --green:   #1d9e60;
+    --red:     #d63031;
+    --mono:    'DM Mono', monospace;
+    --sans:    'Sora', sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--navy);min-height:100vh;}
+
+  /* ── HEADER ── */
+  .app-header{
+    background:var(--navy);
+    padding:14px 28px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:3px solid var(--orange);
+    position:sticky;top:0;z-index:100;
+  }
+  .hd-left{display:flex;align-items:center;gap:14px;}
+  .logo{width:36px;height:36px;background:var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:white;font-family:var(--mono);}
+  .app-title{font-size:1rem;font-weight:700;color:white;letter-spacing:.05em;text-transform:uppercase;}
+  .app-sub{font-size:.7rem;color:#8fa0c0;margin-top:1px;}
+  #hProjectName{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+    color:white;padding:7px 14px;border-radius:6px;
+    font-family:var(--sans);font-size:.82rem;width:260px;
+    outline:none;transition:border .15s;
+  }
+  #hProjectName::placeholder{color:rgba(255,255,255,.4);}
+  #hProjectName:focus{border-color:rgba(255,255,255,.5);}
+
+  /* ── LAYOUT ── */
+  .main{padding:22px 28px;max-width:1600px;margin:0 auto;}
+
+  /* ── CARD ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(26,39,68,.06);}
+  .card-title{
+    font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+    margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:8px;
+  }
+  .card-title::before{content:'';width:3px;height:14px;background:var(--orange);border-radius:2px;flex-shrink:0;}
+
+  /* ── FORM ── */
+  label{display:block;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+  .req{color:var(--orange);}
+  .calc-tag{color:#8fa0c0;font-weight:400;text-transform:none;letter-spacing:0;}
+  input,select{
+    width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:6px;
+    font-family:var(--mono);font-size:.82rem;color:var(--navy);background:white;
+    transition:border .15s;outline:none;
+  }
+  input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,111,212,.1);}
+  input.readonly-field{background:#f5f7fc;color:var(--muted);cursor:not-allowed;border-style:dashed;}
+  input.invalid{border-color:var(--red)!important;}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+  /* ── CONFIG GRID ── */
+  .config-grid{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:20px;}
+  .field-row{display:grid;gap:12px;}
+  .f2{grid-template-columns:1fr 1fr;}
+  .f3{grid-template-columns:1fr 1fr 1fr;}
+
+  /* ── BUDGET BAR ── */
+  .bbar-wrap{margin-top:12px;}
+  .bbar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .bbar-label{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
+  .bbar-pct{font-family:var(--mono);font-size:.72rem;font-weight:500;}
+  .bbar-track{background:#e4e9f4;border-radius:4px;height:8px;overflow:hidden;}
+  .bbar-fill{height:100%;border-radius:4px;transition:width .4s,background .4s;}
+
+  /* ── PHASES ── */
+  .phases-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .phase-row{display:grid;grid-template-columns:1fr 60px 28px;gap:6px;align-items:center;}
+  .phase-row input{font-size:.72rem;padding:5px 8px;}
+  .phase-del{background:none;border:none;cursor:pointer;color:#b0bcc8;font-size:.85rem;padding:4px;border-radius:4px;transition:color .15s;}
+  .phase-del:hover{color:var(--red);}
+  .btn-add-phase{font-size:.65rem;color:var(--blue);background:none;border:1px dashed var(--blue);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:600;margin-top:6px;transition:background .15s;}
+  .btn-add-phase:hover{background:#edf2ff;}
+
+  /* ── RESOURCE FORM ── */
+  .res-form-grid{display:grid;grid-template-columns:1.4fr 1fr .9fr .9fr .9fr 1fr 1fr auto;gap:10px;align-items:end;}
+
+  /* ── BUTTONS ── */
+  .btn{padding:8px 18px;border:none;border-radius:6px;font-family:var(--sans);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .btn-primary{background:var(--orange);color:white;}
+  .btn-primary:hover{background:#c55e0a;transform:translateY(-1px);}
+  .btn-sm{padding:4px 9px;font-size:.65rem;border-radius:4px;}
+  .btn-danger{background:#fff0ef;color:var(--red);border:1px solid #ffd0cc;}
+  .btn-danger:hover{background:var(--red);color:white;}
+  .btn-icon{padding:6px 8px;}
+
+  /* ── MASTER RATES TOGGLE ── */
+  .rates-toggle{font-size:.65rem;color:var(--blue);cursor:pointer;text-decoration:underline;font-weight:600;margin-left:auto;}
+  .rates-panel{
+    display:none;background:#f5f7fc;border:1px solid var(--border);border-radius:8px;
+    padding:14px;margin-top:12px;overflow-x:auto;
+  }
+  .rates-panel.open{display:block;}
+  .rates-table{border-collapse:collapse;font-size:.7rem;width:100%;min-width:480px;}
+  .rates-table th{background:var(--navy2);color:white;padding:6px 10px;text-align:center;font-weight:600;font-size:.63rem;text-transform:uppercase;letter-spacing:.06em;}
+  .rates-table td{border:1px solid var(--border);padding:5px 10px;text-align:center;font-family:var(--mono);}
+  .rates-table tr:nth-child(even) td{background:#edf0f7;}
+  .rates-table .role-col{text-align:left;font-family:var(--sans);font-weight:600;color:var(--navy);}
+
+  /* ── INFO NOTE ── */
+  .info-note{font-size:.7rem;color:var(--muted);background:#f5f8ff;border-left:3px solid var(--blue);padding:8px 12px;border-radius:0 6px 6px 0;margin-top:12px;line-height:1.5;}
+
+  /* ── TIMELINE TABLE ── */
+  .timeline-outer{overflow-x:auto;}
+  table.rls{border-collapse:collapse;width:100%;font-size:.75rem;}
+  .rls th,.rls td{border:1px solid var(--border);}
+
+  /* Phase header bands */
+  .ph-dev    {background:#ccd9f5;color:#1a3a7a;}
+  .ph-test   {background:#fde6a0;color:#6a3e00;}
+  .ph-uat    {background:#b8e8c0;color:#0e4a22;}
+  .ph-golive {background:#dbc8f5;color:#3c1a68;}
+  .ph-other  {background:#d4d4d4;color:#333;}
+
+  /* Week sub-headers */
+  .wk-sub-dev    {background:#e8effc;}
+  .wk-sub-test   {background:#fff8e6;}
+  .wk-sub-uat    {background:#e8f7eb;}
+  .wk-sub-golive {background:#f2eafd;}
+  .wk-sub-other  {background:#f0f0f0;}
+
+  .wk-label{display:block;font-weight:700;font-size:.66rem;color:#2a3a60;}
+  .wk-date {display:block;font-size:.58rem;color:#8090a8;margin-top:1px;}
+
+  /* Column widths */
+  .c-res{min-width:130px;width:140px;text-align:left;padding:7px 12px;font-weight:600;}
+  .c-loc{min-width:80px;width:88px;text-align:center;padding:5px 6px;}
+  .c-rate,.c-cost{min-width:68px;width:72px;text-align:right;padding:5px 9px;font-family:var(--mono);}
+  .c-twk,.c-tday{min-width:58px;width:62px;text-align:center;font-family:var(--mono);font-weight:600;padding:5px 6px;background:#f5f7fc;}
+  .c-rev{min-width:88px;width:96px;text-align:right;font-family:var(--mono);font-weight:600;padding:5px 10px;background:#edf2ff;color:#1a3a8a;}
+  .c-cst{min-width:88px;width:96px;text-align:right;font-family:var(--mono);font-weight:600;padding:5px 10px;background:#fff8ed;color:#7a4000;}
+  .c-del{width:44px;padding:3px;}
+
+  /* Header row */
+  .rls-h{background:var(--navy);color:white;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:7px 6px;}
+  .rls-h.left{text-align:left;}
+
+  /* Alloc cells */
+  .ac{width:50px;min-width:46px;height:34px;cursor:cell;user-select:none;text-align:center;vertical-align:middle;transition:filter .1s;position:relative;}
+  .ac:hover{filter:brightness(.92);box-shadow:inset 0 0 0 1.5px var(--blue);}
+  .ac.ac-selected{box-shadow:inset 0 0 0 2px #7c3aed !important;z-index:1;}
+  .ac.ac-selected::after{content:'';position:absolute;inset:0;background:rgba(124,58,237,.08);pointer-events:none;}
+  .ac-0  {background:#f0f2f8;}
+  .ac-05 {background:#a8c4f0;}
+  .ac-1  {background:#3b6fd4;color:white;}
+  .ac-val{font-family:var(--mono);font-size:.62rem;font-weight:600;line-height:34px;display:block;}
+
+  /* Selection toolbar */
+  .sel-toolbar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:8px 16px;border-radius:10px;font-family:var(--sans);font-size:.72rem;display:flex;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(26,39,68,.3);z-index:150;animation:slideUp .2s;}
+  @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+  .sel-toolbar button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;padding:4px 10px;border-radius:5px;font-size:.65rem;font-weight:600;cursor:pointer;font-family:var(--sans);}
+  .sel-toolbar button:hover{background:rgba(255,255,255,.25);}
+  .sel-toolbar .sel-count{font-weight:700;color:#a8c4f0;}
+  .sel-toolbar kbd{background:rgba(255,255,255,.12);padding:2px 5px;border-radius:3px;font-size:.58rem;font-family:var(--mono);}
+
+  /* Footer / grand total */
+  .gt-row td{background:var(--navy);color:white;font-family:var(--mono);font-weight:600;font-size:.78rem;padding:9px 10px;border-color:#2d3f6b;}
+  .margin-row td{font-family:var(--mono);font-size:.72rem;padding:6px 10px;border:1px solid var(--border);}
+
+  /* ── SUMMARY CHIPS ── */
+  .chips{display:flex;gap:14px;flex-wrap:wrap;}
+  .chip{background:white;border:1px solid var(--border);border-radius:10px;padding:14px 20px;flex:1;min-width:130px;text-align:center;box-shadow:0 1px 3px rgba(26,39,68,.05);}
+  .chip-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:4px;}
+  .chip-val{font-family:var(--mono);font-size:1.35rem;font-weight:500;color:var(--navy);}
+  .chip.c-rev-chip .chip-val{color:#1a3a8a;}
+  .chip.c-cst-chip .chip-val{color:#7a4000;}
+  .chip.c-mgn-chip .chip-val{color:var(--green);}
+
+  /* ── BADGE ── */
+  .badge{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:3px;display:inline-block;}
+  .b-off{background:#e4ecff;color:#1a3a8a;}
+  .b-on {background:#fff0e4;color:#8a3a00;}
+  .b-ns {background:#e4fff0;color:#005a30;}
+
+  /* ── EMPTY STATE ── */
+  .empty{text-align:center;padding:44px 20px;color:var(--muted);}
+  .empty-icon{font-size:2.2rem;margin-bottom:10px;}
+  .empty p{font-size:.82rem;}
+
+  /* ── EXECUTIVE TIMELINE (GANTT) ── */
+  .gantt-wrap{overflow-x:auto;margin-top:8px;}
+  .gantt-table{border-collapse:collapse;width:100%;font-size:.72rem;}
+  .gantt-table th,.gantt-table td{border:1px solid var(--border);padding:6px 8px;}
+  .gantt-table th{background:var(--navy);color:white;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+  .gantt-bar{height:18px;border-radius:3px;min-width:4px;}
+  .gantt-bar-dev{background:linear-gradient(90deg,#3b6fd4,#5a8af0);}
+  .gantt-bar-test{background:linear-gradient(90deg,#e8960a,#f5b742);}
+  .gantt-bar-uat{background:linear-gradient(90deg,#1d9e60,#3cc47a);}
+  .gantt-bar-golive{background:linear-gradient(90deg,#7c3aed,#a78bfa);}
+
+  /* Phase completion flags */
+  .phase-flag{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:6px;animation:flagWave 2s ease-in-out infinite;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;}
+  .phase-flag .flag-icon{display:inline-block;font-size:1rem;animation:flagFlutter 1s ease-in-out infinite alternate;}
+  .phase-flag-col .flag-icon{font-size:1.1rem;}
+  @keyframes flagWave{0%,100%{transform:translateY(0);filter:brightness(1);}50%{transform:translateY(-3px);filter:brightness(1.05);}}
+  @keyframes flagFlutter{0%{transform:rotate(-12deg) scale(1);}100%{transform:rotate(12deg) scale(1.1);}}
+  .flag-dev{background:linear-gradient(135deg,#ccd9f5,#e0eaff);color:#1a3a7a;border:2px solid #7a9fd4;box-shadow:0 2px 8px rgba(59,111,212,.25);}
+  .flag-test{background:linear-gradient(135deg,#fde6a0,#fff3d0);color:#6a3e00;border:2px solid #d4a030;box-shadow:0 2px 8px rgba(232,150,10,.25);}
+  .flag-uat{background:linear-gradient(135deg,#b8e8c0,#d8f5dc);color:#0e4a22;border:2px solid #5cb878;box-shadow:0 2px 8px rgba(29,158,96,.25);}
+  .flag-golive{background:linear-gradient(135deg,#dbc8f5,#ede0ff);color:#3c1a68;border:2px solid #9a6ed0;box-shadow:0 2px 8px rgba(124,58,237,.25);}
+  .flag-other{background:linear-gradient(135deg,#d4d4d4,#e8e8e8);color:#333;border:2px solid #999;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .gantt-bar-other{background:linear-gradient(90deg,#6b7280,#9ca3af);}
+  .gantt-role{font-weight:600;white-space:nowrap;}
+  .gantt-loc{font-size:.6rem;color:var(--muted);}
+  .gantt-cell{padding:3px 2px!important;vertical-align:middle;}
+  .gantt-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+  .gantt-legend-item{display:flex;align-items:center;gap:5px;font-size:.65rem;color:var(--muted);}
+  .gantt-legend-color{width:14px;height:10px;border-radius:2px;}
+  .milestone-row td{background:#f9fafb;font-weight:700;font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--navy2);}
+
+  /* ── FIT TO BUDGET ── */
+  .fit-bar{display:flex;gap:10px;align-items:end;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);}
+  .fit-bar .btn{flex-shrink:0;}
+  .fit-hint{font-size:.65rem;color:var(--muted);line-height:1.5;}
+
+  /* ── ACTION BAR ── */
+  .action-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn-export{background:#0e7c42;color:white;}
+  .btn-export:hover{background:#0a6235;transform:translateY(-1px);}
+  .btn-fit{background:var(--blue);color:white;}
+  .btn-fit:hover{background:#2d5ab8;transform:translateY(-1px);}
+
+  /* ── VIEW TOGGLE ── */
+  .view-toggle{display:inline-flex;border:1.5px solid var(--border);border-radius:6px;overflow:hidden;margin-left:12px;}
+  .view-toggle button{background:white;border:none;padding:4px 12px;font-family:var(--sans);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);cursor:pointer;transition:all .15s;border-right:1px solid var(--border);}
+  .view-toggle button:last-child{border-right:none;}
+  .view-toggle button.active{background:var(--navy);color:white;}
+  .view-toggle button:hover:not(.active){background:#edf0f7;}
+
+  /* ── EDIT BUTTON ── */
+  .btn-edit{background:#edf2ff;color:var(--blue);border:1px solid #c0d4f5;}
+  .btn-edit:hover{background:var(--blue);color:white;}
+  .c-actions{width:80px;padding:3px;text-align:center;}
+  .c-actions .btn{margin:0 1px;}
+
+  /* ── EDIT MODAL ── */
+  .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,39,68,.45);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:white;border-radius:12px;padding:24px 28px;max-width:520px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+  .modal-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);}
+  .btn-secondary{background:#edf0f7;color:var(--navy);border:1px solid var(--border);}
+  .btn-secondary:hover{background:#dde2ef;}
+
+  /* ── SUGGESTIONS PANEL ── */
+  .suggest-card{background:white;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(26,39,68,.06);}
+  .suggest-title{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+  .suggest-title::before{content:'';width:3px;height:14px;background:#7c3aed;border-radius:2px;flex-shrink:0;}
+  .suggest-list{list-style:none;padding:0;margin:0;}
+  .suggest-item{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:.75rem;line-height:1.5;}
+  .suggest-item:last-child{margin-bottom:0;}
+  .si-warn{background:#fff8ed;border-left:3px solid #e8960a;}
+  .si-danger{background:#fff0ef;border-left:3px solid var(--red);}
+  .si-success{background:#ecfdf5;border-left:3px solid var(--green);}
+  .si-info{background:#edf2ff;border-left:3px solid var(--blue);}
+  .si-icon{font-size:1rem;flex-shrink:0;line-height:1.3;}
+  .si-text{flex:1;}
+  .si-text strong{color:var(--navy);}
+
+  @media(max-width:900px){
+    .config-grid{grid-template-columns:1fr;}
+    .res-form-grid{grid-template-columns:1fr 1fr;}
+    .main{padding:14px;}
+    .phases-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="hd-left">
+    <div class="logo">R</div>
+    <div>
+      <div class="app-title">RLS Builder</div>
+      <div class="app-sub">Resource Loading Sheet Generator</div>
+    </div>
+  </div>
+  <input id="hProjectName" type="text" placeholder="Project name…" oninput="state.projectName=this.value">
+</header>
+
+<div class="main">
+
+  <!-- ── PROJECT SETUP ── -->
+  <div class="card">
+    <div class="card-title" style="display:flex;align-items:center;">
+      Project Setup
+      <span class="rates-toggle" onclick="toggleRates()">⚙ Master Rates</span>
+    </div>
+    <div class="config-grid">
+
+      <!-- Dates -->
+      <div>
+        <div class="field-row f2">
+          <div>
+            <label>Start Date <span class="req">*</span></label>
+            <input type="date" id="startDate" oninput="onCfgChange()">
+          </div>
+          <div>
+            <label>End Date <span class="calc-tag">(editable)</span></label>
+            <input type="date" id="endDateInput" oninput="onEndDateChange()" placeholder="Auto or set manually">
+          </div>
+        </div>
+        <div class="field-row f2" style="margin-top:10px">
+          <div>
+            <label>Total Budget ($)</label>
+            <input type="number" id="budget" placeholder="0.00" min="0" step="100" oninput="onCfgChange()">
+          </div>
+          <div>
+            <label>Person Days <span class="calc-tag">(derived)</span></label>
+            <input id="personDaysDisplay" class="readonly-field" readonly placeholder="From allocations">
+          </div>
+        </div>
+        <div id="bbarWrap" class="bbar-wrap" style="display:none">
+          <div class="bbar-header">
+            <span class="bbar-label" id="bbarLabel">Budget used: —</span>
+            <span class="bbar-pct" id="bbarPct"></span>
+          </div>
+          <div class="bbar-track"><div class="bbar-fill" id="bbarFill"></div></div>
+        </div>
+      </div>
+
+      <!-- Budget insight -->
+      <div style="display:flex;flex-direction:column;justify-content:center;">
+        <div style="background:#f5f8ff;border:1px solid #d0dbf5;border-radius:8px;padding:14px 16px;">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:8px;">Budget Capacity</div>
+          <div id="budgetInsight" style="font-family:var(--mono);font-size:.8rem;color:var(--navy2);line-height:1.7;">
+            Set a budget and add resources to see capacity analysis.
+          </div>
+        </div>
+      </div>
+
+      <!-- Phases -->
+      <div>
+        <label style="margin-bottom:8px">Project Phases <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aab0c0;font-size:.62rem">(name + weeks)</span></label>
+        <div class="phases-grid" id="phasesList"></div>
+        <button class="btn-add-phase" onclick="addPhase()">+ Add Phase</button>
+      </div>
+    </div>
+
+    <!-- Budget Fit Controls -->
+    <div class="fit-bar" id="fitBar" style="display:none">
+      <div style="flex:1">
+        <div class="fit-hint"><strong>Auto-Fit:</strong> Adjust all resource allocations so total revenue fits within your budget. Optionally set a target end date to cap the timeline.</div>
+        <div style="display:flex;gap:10px;margin-top:8px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <label>Target End Date <span class="calc-tag">(optional)</span></label>
+            <input type="date" id="targetEndDate" style="width:170px">
+          </div>
+          <button class="btn btn-fit" onclick="fitToBudget()">Fit to Budget</button>
+          <button class="btn btn-sm btn-danger" onclick="resetAllocations()" style="margin-left:4px;">Reset Allocations</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Master Rates Panel -->
+    <div class="rates-panel" id="ratesPanel">
+      <table class="rates-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Role</th>
+            <th colspan="2">Offshore</th>
+            <th colspan="2">Onsite</th>
+            <th colspan="2">NearShore</th>
+            <th></th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>Rate/Hr</th><th>Cost/Hr</th>
+            <th>Rate/Hr</th><th>Cost/Hr</th>
+            <th>Rate/Hr</th><th>Cost/Hr</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ratesTableBody"></tbody>
+        <tfoot>
+          <tr id="addRateRow">
+            <td><input type="text" id="newRoleName" placeholder="New role name" style="font-size:.7rem;padding:4px 6px;width:100%;"></td>
+            <td><input type="number" id="newOffRate" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><input type="number" id="newOffCost" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><input type="number" id="newOnRate" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><input type="number" id="newOnCost" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><input type="number" id="newNsRate" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><input type="number" id="newNsCost" placeholder="0" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;"></td>
+            <td><button class="btn btn-primary btn-sm" onclick="addMasterRole()" style="font-size:.6rem;padding:4px 8px;">+ Add</button></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="info-note" style="margin-top:10px">Click any rate/cost value to edit inline. Changes auto-populate when selecting Role + Location. You can still override per resource.</div>
+    </div>
+  </div>
+
+  <!-- ── ADD RESOURCE ── -->
+  <div class="card">
+    <div class="card-title">Add Resource</div>
+    <div class="res-form-grid">
+      <div>
+        <label>Role <span class="req">*</span></label>
+        <select id="fRole" onchange="onRoleLocChange()">
+          <option value="">Select role…</option>
+          <option>TPM</option>
+          <option>Architect</option>
+          <option>AI Developer</option>
+          <option>FS Developer</option>
+          <option>QA</option>
+          <option>Scrum Master</option>
+        </select>
+      </div>
+      <div>
+        <label>Location <span class="req">*</span></label>
+        <select id="fLoc" onchange="onRoleLocChange()">
+          <option value="">Select…</option>
+          <option>Offshore</option>
+          <option>Onsite</option>
+          <option>NearShore</option>
+        </select>
+      </div>
+      <div>
+        <label>Rate/Hr ($)</label>
+        <input type="number" id="fRate" placeholder="Auto" step=".01" min="0">
+      </div>
+      <div>
+        <label>Cost/Hr ($)</label>
+        <input type="number" id="fCost" placeholder="Auto" step=".01" min="0">
+      </div>
+      <div>
+        <label>Allocation</label>
+        <select id="fAlloc">
+          <option value="1">Full (1.0)</option>
+          <option value="0.9">90% (0.9)</option>
+          <option value="0.8">80% (0.8)</option>
+          <option value="0.7">70% (0.7)</option>
+          <option value="0.6">60% (0.6)</option>
+          <option value="0.5">50% (0.5)</option>
+          <option value="0.4">40% (0.4)</option>
+          <option value="0.3">30% (0.3)</option>
+          <option value="0.2">20% (0.2)</option>
+          <option value="0.1">10% (0.1)</option>
+          <option value="0">None (0.0)</option>
+        </select>
+      </div>
+      <div>
+        <label>Onboard Date <span class="calc-tag">(optional)</span></label>
+        <input type="date" id="fOnboard" placeholder="From start">
+      </div>
+      <div>
+        <label>Active Weeks <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aab0c0;font-size:.6rem">(e.g. 1-4, 6)</span></label>
+        <input type="text" id="fWeeks" placeholder="All weeks (default)">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addResource()">+ Add</button>
+      </div>
+    </div>
+    <div class="info-note">
+      <strong>Rate & Cost</strong> auto-fill from master list when Role + Location are selected — override freely. <strong>Onboard Date</strong>: set the date from which this resource joins — weeks before it will be zeroed out automatically. <strong></strong>Active Weeks</strong>: leave blank for all weeks, or specify ranges like <code>1-3, 5</code>. Click any allocation cell in the grid below to toggle between 0 / 0.5 / 1.
+    </div>
+  </div>
+
+  <!-- ── TIMELINE GRID ── -->
+  <div class="card">
+    <div class="card-title" style="display:flex;align-items:center;">
+      Timeline & Effort View
+      <div class="view-toggle" id="viewToggle" style="display:none;">
+        <button class="active" onclick="setView('weeks')">Weeks</button>
+        <button onclick="setView('days')">Days</button>
+        <button onclick="setView('months')">Months</button>
+      </div>
+      <div class="action-bar" style="margin-left:auto;">
+        <button class="btn btn-export btn-sm" onclick="exportToExcel()" id="btnExport" style="display:none;">Export Excel</button>
+      </div>
+    </div>
+    <div class="timeline-outer">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">📋</div>
+        <p>Set a <strong>Start Date</strong> and add resources to generate the timeline</p>
+      </div>
+      <table class="rls" id="rlsTable" style="display:none"></table>
+    </div>
+  </div>
+
+  <!-- ── EXECUTIVE TIMELINE ── -->
+  <div class="card" id="ganttCard" style="display:none">
+    <div class="card-title" style="display:flex;align-items:center;">
+      Executive Timeline
+      <div class="view-toggle" id="ganttViewToggle" style="margin-left:12px;">
+        <button class="active" onclick="setGanttView('weeks')">Weeks</button>
+        <button onclick="setGanttView('days')">Days</button>
+        <button onclick="setGanttView('months')">Months</button>
+      </div>
+    </div>
+    <div class="gantt-wrap" id="ganttWrap"></div>
+  </div>
+
+  <!-- ── SUMMARY ── -->
+  <div class="card">
+    <div class="card-title">Project Summary</div>
+    <div class="chips">
+      <div class="chip"><div class="chip-lbl">Total Weeks</div><div class="chip-val" id="sTotalWk">—</div></div>
+      <div class="chip"><div class="chip-lbl">Person Days</div><div class="chip-val" id="sTotalPD">—</div></div>
+      <div class="chip c-rev-chip"><div class="chip-lbl">Total Revenue</div><div class="chip-val" id="sTotalRev">—</div></div>
+      <div class="chip c-cst-chip"><div class="chip-lbl">Total Cost</div><div class="chip-val" id="sTotalCst">—</div></div>
+      <div class="chip c-mgn-chip"><div class="chip-lbl">Margin</div><div class="chip-val" id="sMargin">—</div></div>
+      <div class="chip"><div class="chip-lbl">End Date</div><div class="chip-val" style="font-size:.95rem" id="sEndDate">—</div></div>
+    </div>
+  </div>
+
+  <!-- ── INTELLIGENT SUGGESTIONS ── -->
+  <div class="suggest-card" id="suggestCard" style="display:none">
+    <div class="suggest-title">Intelligent Suggestions</div>
+    <ul class="suggest-list" id="suggestList"></ul>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ── EDIT RESOURCE MODAL ── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Resource</div>
+    <input type="hidden" id="editResId">
+    <div class="modal-grid">
+      <div>
+        <label>Role</label>
+        <select id="eRole">
+          <option>TPM</option><option>Architect</option><option>AI Developer</option>
+          <option>FS Developer</option><option>QA</option><option>Scrum Master</option>
+        </select>
+      </div>
+      <div>
+        <label>Location</label>
+        <select id="eLoc">
+          <option>Offshore</option><option>Onsite</option><option>NearShore</option>
+        </select>
+      </div>
+      <div>
+        <label>Rate/Hr ($)</label>
+        <input type="number" id="eRate" step=".01" min="0">
+      </div>
+      <div>
+        <label>Cost/Hr ($)</label>
+        <input type="number" id="eCost" step=".01" min="0">
+      </div>
+      <div>
+        <label>Onboard Date</label>
+        <input type="date" id="eOnboard">
+      </div>
+      <div>
+        <label>Default Allocation</label>
+        <select id="eAlloc">
+          <option value="1">Full (1.0)</option>
+          <option value="0.9">90% (0.9)</option>
+          <option value="0.8">80% (0.8)</option>
+          <option value="0.7">70% (0.7)</option>
+          <option value="0.6">60% (0.6)</option>
+          <option value="0.5">50% (0.5)</option>
+          <option value="0.4">40% (0.4)</option>
+          <option value="0.3">30% (0.3)</option>
+          <option value="0.2">20% (0.2)</option>
+          <option value="0.1">10% (0.1)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditResource()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  MASTER RATES
+// ═══════════════════════════════════════════
+const MR = {
+  'TPM':          { Offshore:{rate:30,cost:20}, Onsite:{rate:75,cost:45}, NearShore:{rate:50,cost:32} },
+  'Architect':    { Offshore:{rate:35,cost:22}, Onsite:{rate:90,cost:55}, NearShore:{rate:60,cost:38} },
+  'AI Developer': { Offshore:{rate:28,cost:12}, Onsite:{rate:80,cost:48}, NearShore:{rate:55,cost:35} },
+  'FS Developer': { Offshore:{rate:28,cost:12}, Onsite:{rate:75,cost:45}, NearShore:{rate:50,cost:32} },
+  'QA':           { Offshore:{rate:25,cost:14}, Onsite:{rate:65,cost:40}, NearShore:{rate:45,cost:28} },
+  'Scrum Master': { Offshore:{rate:30,cost:18}, Onsite:{rate:70,cost:42}, NearShore:{rate:48,cost:30} }
+};
+
+// Phase color mapping
+const PH_COLORS = ['dev','test','uat','golive','other'];
+function phColor(idx){ return PH_COLORS[Math.min(idx, PH_COLORS.length-1)]; }
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const state = {
+  projectName: '',
+  phases: [
+    {id:'p1', name:'Development',       weeks:2},
+    {id:'p2', name:'TEST',              weeks:1},
+    {id:'p3', name:'UAT',               weeks:1},
+    {id:'p4', name:'Go-Live & Hypercare',weeks:1}
+  ],
+  resources: [],
+  manualEndDate: null,
+  viewMode: 'weeks',
+  _nextId: 1
+};
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+function fmt$(n){ return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDateShort(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function fmtDateFull(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+function getStartDate(){
+  const v = document.getElementById('startDate').value;
+  return v ? new Date(v+'T00:00:00') : null;
+}
+function getBudget(){
+  const v = parseFloat(document.getElementById('budget').value);
+  return isNaN(v) || v<=0 ? 0 : v;
+}
+function totalPhaseWeeks(){ return state.phases.reduce((s,p)=>s+(parseInt(p.weeks)||0),0); }
+
+function getWeeks(){
+  const start = getStartDate();
+  if(!start) return [];
+  const weeks=[]; let d=new Date(start),wn=1;
+  state.phases.forEach((ph,pi)=>{
+    const wks=parseInt(ph.weeks)||0;
+    for(let i=0;i<wks;i++){
+      weeks.push({key:`wk${wn}`,label:`WK${wn}`,date:fmtDateShort(d),phase:ph.name,phColor:phColor(pi)});
+      d.setDate(d.getDate()+7); wn++;
+    }
+  });
+  return weeks;
+}
+
+function calcEndDate(){
+  const s=getStartDate(); if(!s) return null;
+  const d=new Date(s); d.setDate(d.getDate()+totalPhaseWeeks()*7-1);
+  return d;
+}
+
+function parseWeekRanges(str,total){
+  if(!str||!str.trim()) return null;
+  const keys=new Set();
+  str.split(',').map(s=>s.trim()).forEach(p=>{
+    if(p.includes('-')){
+      const [a,b]=p.split('-').map(Number);
+      for(let i=a;i<=Math.min(b,total);i++) keys.add(`wk${i}`);
+    } else {
+      const n=parseInt(p);
+      if(!isNaN(n)&&n>=1&&n<=total) keys.add(`wk${n}`);
+    }
+  });
+  return keys;
+}
+
+function calcRes(r, weeks){
+  let days=0;
+  weeks.forEach(wk=>{ days+=(r.allocations[wk.key]??0)*5; });
+  const rev=days*8*r.rate, cst=days*8*r.cost;
+  const activeWks=weeks.filter(wk=>(r.allocations[wk.key]??0)>0).length;
+  return {days,rev,cst,activeWks};
+}
+
+function calcGrand(weeks){
+  let days=0,rev=0,cst=0;
+  state.resources.forEach(r=>{ const c=calcRes(r,weeks); days+=c.days; rev+=c.rev; cst+=c.cst; });
+  return {days,rev,cst};
+}
+
+// ═══════════════════════════════════════════
+//  PHASE UI
+// ═══════════════════════════════════════════
+function renderPhases(){
+  document.getElementById('phasesList').innerHTML = state.phases.map((ph,i)=>`
+    <div class="phase-row">
+      <input type="text" value="${esc(ph.name)}" oninput="state.phases[${i}].name=this.value;render()" style="font-size:.72rem;padding:5px 8px">
+      <input type="number" value="${ph.weeks}" min="0" max="52" oninput="state.phases[${i}].weeks=parseInt(this.value)||0;onCfgChange()" style="text-align:center;font-family:var(--mono);font-size:.72rem;padding:5px 6px">
+      <button class="phase-del" onclick="removePhase(${i})" title="Remove phase">✕</button>
+    </div>`).join('');
+}
+
+function addPhase(){
+  const id='p'+Date.now();
+  state.phases.push({id,name:'Phase '+(state.phases.length+1),weeks:1});
+  renderPhases(); onCfgChange();
+}
+function removePhase(i){
+  if(state.phases.length<=1){alert('At least one phase required.');return;}
+
+  const removedWks=parseInt(state.phases[i].weeks)||0;
+
+  // Calculate which week indices belong to the removed phase
+  const oldWeeks=getWeeks(); // weeks BEFORE removal
+  let startIdx=0;
+  for(let p=0;p<i;p++) startIdx+=(parseInt(state.phases[p].weeks)||0);
+  const removedKeys=new Set();
+  for(let w=startIdx;w<startIdx+removedWks;w++){
+    if(oldWeeks[w]) removedKeys.add(oldWeeks[w].key);
+  }
+
+  // Build ordered list of allocation values excluding removed phase weeks
+  state.resources.forEach(r=>{
+    const orderedVals=[];
+    oldWeeks.forEach(wk=>{
+      if(!removedKeys.has(wk.key)){
+        orderedVals.push(r.allocations[wk.key]??0);
+      }
+    });
+    // Rebuild allocations with shifted keys
+    const newAllocs={};
+    orderedVals.forEach((v,idx)=>{ newAllocs[`wk${idx+1}`]=v; });
+    r.allocations=newAllocs;
+  });
+
+  // Remove the phase
+  state.phases.splice(i,1);
+
+  // Redistribute removed weeks proportionally across remaining phases
+  if(removedWks>0&&state.phases.length>0){
+    const remainingTotal=state.phases.reduce((s,p)=>s+(parseInt(p.weeks)||0),0);
+    let distributed=0;
+    state.phases.forEach((p,idx)=>{
+      const oldWk=parseInt(p.weeks)||1;
+      if(idx<state.phases.length-1){
+        const share=remainingTotal>0?Math.round(removedWks*(oldWk/remainingTotal)):Math.round(removedWks/state.phases.length);
+        p.weeks=oldWk+share;
+        distributed+=share;
+      } else {
+        // Last phase gets remainder to ensure exact total
+        p.weeks=oldWk+(removedWks-distributed);
+      }
+    });
+  }
+
+  renderPhases(); onCfgChange();
+}
+
+// ═══════════════════════════════════════════
+//  MASTER RATES TABLE
+// ═══════════════════════════════════════════
+function renderRatesTable(){
+  document.getElementById('ratesTableBody').innerHTML = Object.entries(MR).map(([role,locs])=>`
+    <tr>
+      <td class="role-col"><input type="text" value="${esc(role)}" onchange="renameMasterRole('${esc(role)}',this.value)" style="font-size:.7rem;padding:3px 6px;width:100%;border:1px solid transparent;background:transparent;font-weight:600;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.Offshore.rate}" onchange="updateMasterRate('${esc(role)}','Offshore','rate',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.Offshore.cost}" onchange="updateMasterRate('${esc(role)}','Offshore','cost',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.Onsite.rate}" onchange="updateMasterRate('${esc(role)}','Onsite','rate',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.Onsite.cost}" onchange="updateMasterRate('${esc(role)}','Onsite','cost',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.NearShore.rate}" onchange="updateMasterRate('${esc(role)}','NearShore','rate',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><input type="number" value="${locs.NearShore.cost}" onchange="updateMasterRate('${esc(role)}','NearShore','cost',this.value)" step=".01" min="0" style="width:56px;font-size:.7rem;padding:3px 4px;text-align:center;border:1px solid transparent;background:transparent;" onfocus="this.style.border='1px solid var(--blue)'" onblur="this.style.border='1px solid transparent'"></td>
+      <td><button class="btn btn-sm btn-danger btn-icon" onclick="deleteMasterRole('${esc(role)}')" title="Remove role" style="font-size:.6rem;">✕</button></td>
+    </tr>`).join('');
+}
+
+function updateMasterRate(role,loc,field,val){
+  if(!MR[role]||!MR[role][loc]) return;
+  MR[role][loc][field]=parseFloat(val)||0;
+  refreshRoleDropdowns();
+}
+
+function renameMasterRole(oldName,newName){
+  newName=newName.trim();
+  if(!newName||newName===oldName) { renderRatesTable(); return; }
+  if(MR[newName]){ alert('Role "'+newName+'" already exists.'); renderRatesTable(); return; }
+  MR[newName]=MR[oldName];
+  delete MR[oldName];
+  // Update existing resources that used the old role name
+  state.resources.forEach(r=>{ if(r.role===oldName) r.role=newName; });
+  renderRatesTable();
+  refreshRoleDropdowns();
+  render();
+}
+
+function deleteMasterRole(role){
+  if(Object.keys(MR).length<=1){ alert('At least one role required.'); return; }
+  if(!confirm('Delete role "'+role+'" from master rates?')) return;
+  delete MR[role];
+  renderRatesTable();
+  refreshRoleDropdowns();
+}
+
+function addMasterRole(){
+  const name=document.getElementById('newRoleName').value.trim();
+  if(!name){ alert('Role name is required.'); return; }
+  if(MR[name]){ alert('Role "'+name+'" already exists.'); return; }
+  MR[name]={
+    Offshore:{ rate:parseFloat(document.getElementById('newOffRate').value)||0, cost:parseFloat(document.getElementById('newOffCost').value)||0 },
+    Onsite:{ rate:parseFloat(document.getElementById('newOnRate').value)||0, cost:parseFloat(document.getElementById('newOnCost').value)||0 },
+    NearShore:{ rate:parseFloat(document.getElementById('newNsRate').value)||0, cost:parseFloat(document.getElementById('newNsCost').value)||0 }
+  };
+  // Clear inputs
+  ['newRoleName','newOffRate','newOffCost','newOnRate','newOnCost','newNsRate','newNsCost'].forEach(id=>document.getElementById(id).value='');
+  renderRatesTable();
+  refreshRoleDropdowns();
+}
+
+function refreshRoleDropdowns(){
+  const roles=Object.keys(MR);
+  const opts=roles.map(r=>`<option>${r}</option>`).join('');
+  // Update Add Resource role dropdown
+  const fRole=document.getElementById('fRole');
+  const fRoleVal=fRole.value;
+  fRole.innerHTML=`<option value="">Select role\u2026</option>`+opts;
+  if(roles.includes(fRoleVal)) fRole.value=fRoleVal;
+  // Update Edit Modal role dropdown
+  const eRole=document.getElementById('eRole');
+  const eRoleVal=eRole.value;
+  eRole.innerHTML=opts;
+  if(roles.includes(eRoleVal)) eRole.value=eRoleVal;
+}
+
+function toggleRates(){
+  document.getElementById('ratesPanel').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════
+//  EVENT HANDLERS
+// ═══════════════════════════════════════════
+function onRoleLocChange(){
+  const role=document.getElementById('fRole').value;
+  const loc=document.getElementById('fLoc').value;
+  if(role&&loc&&MR[role]?.[loc]){
+    const {rate,cost}=MR[role][loc];
+    document.getElementById('fRate').value=rate;
+    document.getElementById('fCost').value=cost;
+  }
+}
+
+function onCfgChange(){
+  // Only auto-fill end date if user hasn't manually set one
+  if(!state.manualEndDate){
+    const end=calcEndDate();
+    document.getElementById('endDateInput').value = end?formatDateISO(end):'';
+  }
+  syncResourceAllocations();
+  renderPhases();
+  render();
+}
+
+function syncResourceAllocations(){
+  const weeks=getWeeks();
+  if(!weeks.length) return;
+  const projStart=getStartDate();
+  state.resources.forEach(r=>{
+    const oldAllocs=r.allocations||{};
+    const newAllocs={};
+    const onboard=r.onboardDate?new Date(r.onboardDate+'T00:00:00'):null;
+    weeks.forEach((wk,wi)=>{
+      if(oldAllocs[wk.key]!==undefined){
+        newAllocs[wk.key]=oldAllocs[wk.key];
+      } else {
+        // New week — set allocation based on onboard date
+        const wkStart=new Date(projStart.getTime()+wi*7*86400000);
+        newAllocs[wk.key]=(onboard&&wkStart<onboard)?0:1;
+      }
+    });
+    r.allocations=newAllocs;
+  });
+}
+
+function onEndDateChange(){
+  const val=document.getElementById('endDateInput').value;
+  const start=getStartDate();
+  if(!val){ state.manualEndDate=null; onCfgChange(); return; }
+  if(!start){ return; }
+  const end=new Date(val+'T00:00:00');
+  if(end<=start){ alert('End date must be after start date.'); return; }
+  state.manualEndDate=end;
+  // Calculate total weeks from start to end
+  const totalDays=Math.round((end-start)/(86400000));
+  const totalWks=Math.max(1,Math.round(totalDays/7));
+  // Redistribute weeks proportionally across phases
+  const currentTotal=totalPhaseWeeks()||state.phases.length;
+  let assigned=0;
+  state.phases.forEach((p,i)=>{
+    const oldWk=parseInt(p.weeks)||1;
+    if(i<state.phases.length-1){
+      p.weeks=Math.max(1,Math.round(oldWk/currentTotal*totalWks));
+      assigned+=p.weeks;
+    } else {
+      p.weeks=Math.max(1,totalWks-assigned);
+    }
+  });
+  syncResourceAllocations();
+  renderPhases();
+  render();
+}
+
+function formatDateISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function addResource(){
+  const role=document.getElementById('fRole').value;
+  const loc=document.getElementById('fLoc').value;
+  if(!role){mark('fRole',true);alert('Role is required.');return;} mark('fRole',false);
+  if(!loc){mark('fLoc',true);alert('Location is required.');return;} mark('fLoc',false);
+  if(!getStartDate()){alert('Please set a Start Date first.');return;}
+
+  const rate=parseFloat(document.getElementById('fRate').value)||(MR[role]?.[loc]?.rate??0);
+  const cost=parseFloat(document.getElementById('fCost').value)||(MR[role]?.[loc]?.cost??0);
+  const defAlloc=parseFloat(document.getElementById('fAlloc').value)||1;
+  const wkStr=document.getElementById('fWeeks').value;
+  const onboardVal=document.getElementById('fOnboard').value;
+  const onboardDate=onboardVal?new Date(onboardVal+'T00:00:00'):null;
+  const weeks=getWeeks();
+  const activeSet=parseWeekRanges(wkStr,weeks.length);
+  const projStart=getStartDate();
+
+  const allocs={};
+  weeks.forEach((wk,wi)=>{
+    // Determine week start date
+    const wkStart=new Date(projStart.getTime()+wi*7*86400000);
+    // If onboard date is set and this week starts before it, zero allocation
+    if(onboardDate && wkStart<onboardDate){
+      allocs[wk.key]=0;
+    } else {
+      allocs[wk.key]=(activeSet===null||activeSet.has(wk.key))?defAlloc:0;
+    }
+  });
+
+  state.resources.push({id:state._nextId++,role,location:loc,rate,cost,onboardDate:onboardVal||null,allocations:allocs});
+  // Reset form
+  ['fRole','fLoc','fRate','fCost','fWeeks','fOnboard'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('fAlloc').value='1';
+  render();
+}
+
+function deleteResource(id){
+  state.resources=state.resources.filter(r=>r.id!==id);
+  render();
+}
+
+// ── CELL SELECTION & EDITING STATE ──
+const cellSelection={
+  cells:[],       // [{id, key}]
+  anchor:null,    // {id, key} for shift-click range
+  clipboard:[]    // [{row,col,val}] for copy-paste
+};
+
+function toggleAlloc(id,key){
+  const r=state.resources.find(r=>r.id===id); if(!r) return;
+  const cur=r.allocations[key]??0;
+  r.allocations[key]=cur===0?0.5:cur===0.5?1:0;
+  render();
+}
+
+function cellMouseDown(ev,id,key){
+  ev.preventDefault();
+  const td=ev.currentTarget;
+  if(td.querySelector('input')) return;
+
+  if(ev.shiftKey && cellSelection.anchor){
+    // Range select from anchor to this cell
+    selectRange(cellSelection.anchor,{id,key});
+  } else if(ev.ctrlKey || ev.metaKey){
+    // Toggle this cell in/out of selection
+    const idx=cellSelection.cells.findIndex(c=>c.id===id&&c.key===key);
+    if(idx>=0) cellSelection.cells.splice(idx,1);
+    else cellSelection.cells.push({id,key});
+    cellSelection.anchor={id,key};
+    updateSelectionUI();
+  } else {
+    // Single select
+    cellSelection.cells=[{id,key}];
+    cellSelection.anchor={id,key};
+    updateSelectionUI();
+  }
+}
+
+function cellDblClick(ev,id,key){
+  ev.preventDefault();
+  ev.stopPropagation();
+  // Open inline edit for single cell
+  cellSelection.cells=[{id,key}];
+  updateSelectionUI();
+  openCellEditor(id,key);
+}
+
+function selectRange(from,to){
+  const weeks=getWeeks();
+  const wkKeys=weeks.map(w=>w.key);
+  const resIds=state.resources.map(r=>r.id);
+
+  const r1=resIds.indexOf(from.id), r2=resIds.indexOf(to.id);
+  const c1=wkKeys.indexOf(from.key), c2=wkKeys.indexOf(to.key);
+  if(r1<0||r2<0||c1<0||c2<0) return;
+
+  const rMin=Math.min(r1,r2), rMax=Math.max(r1,r2);
+  const cMin=Math.min(c1,c2), cMax=Math.max(c1,c2);
+
+  cellSelection.cells=[];
+  for(let ri=rMin;ri<=rMax;ri++){
+    for(let ci=cMin;ci<=cMax;ci++){
+      cellSelection.cells.push({id:resIds[ri],key:wkKeys[ci]});
+    }
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI(){
+  // Clear all selection highlights
+  document.querySelectorAll('.ac.ac-selected').forEach(el=>el.classList.remove('ac-selected'));
+  // Apply highlights
+  cellSelection.cells.forEach(c=>{
+    const td=document.querySelector(`td[data-rid="${c.id}"][data-wk="${c.key}"]`);
+    if(td) td.classList.add('ac-selected');
+  });
+  // Show/hide toolbar
+  renderSelToolbar();
+}
+
+function renderSelToolbar(){
+  let tb=document.getElementById('selToolbar');
+  if(cellSelection.cells.length<=1){
+    if(tb) tb.remove();
+    return;
+  }
+  if(!tb){
+    tb=document.createElement('div');
+    tb.id='selToolbar';
+    tb.className='sel-toolbar';
+    document.body.appendChild(tb);
+  }
+  const n=cellSelection.cells.length;
+  tb.innerHTML=`
+    <span><span class="sel-count">${n}</span> cells selected</span>
+    <button onclick="bulkSetValue()">Set Value</button>
+    <button onclick="bulkClear()">Clear (0%)</button>
+    <button onclick="bulkFull()">Full (100%)</button>
+    <button onclick="bulkHalf()">Half (50%)</button>
+    <span style="opacity:.7;font-size:.6rem;"><kbd>Ctrl+C</kbd> copy &nbsp;<kbd>Ctrl+V</kbd> paste &nbsp;<kbd>Del</kbd> clear</span>
+    <button onclick="clearSelection()" style="margin-left:8px;">✕</button>
+  `;
+}
+
+function clearSelection(){
+  cellSelection.cells=[];
+  cellSelection.anchor=null;
+  updateSelectionUI();
+}
+
+function openCellEditor(id,key){
+  const td=document.querySelector(`td[data-rid="${id}"][data-wk="${key}"]`);
+  if(!td||td.querySelector('input')) return;
+  const r=state.resources.find(r=>r.id===id); if(!r) return;
+  const cur=r.allocations[key]??0;
+  const pct=Math.round(cur*100);
+  td.innerHTML=`<input type="number" min="0" max="100" step="5" value="${pct}" style="width:42px;padding:2px 3px;font-size:.7rem;font-family:var(--mono);text-align:center;border:1.5px solid var(--blue);border-radius:4px;outline:none;" onblur="saveAllocCell(${id},'${key}',this)" onkeydown="onCellInputKey(event,${id},'${key}',this)">`;
+  const inp=td.querySelector('input');
+  inp.focus();
+  inp.select();
+}
+
+function onCellInputKey(ev,id,key,inp){
+  if(ev.key==='Enter'){
+    inp.blur();
+  } else if(ev.key==='Escape'){
+    inp.dataset.cancel='1';
+    inp.blur();
+  } else if(ev.key==='Tab'){
+    ev.preventDefault();
+    inp.blur();
+    // Move to next cell
+    const weeks=getWeeks();
+    const wkKeys=weeks.map(w=>w.key);
+    const ci=wkKeys.indexOf(key);
+    const nextKey=ev.shiftKey?wkKeys[ci-1]:wkKeys[ci+1];
+    if(nextKey){
+      cellSelection.cells=[{id,key:nextKey}];
+      cellSelection.anchor={id,key:nextKey};
+      updateSelectionUI();
+      setTimeout(()=>openCellEditor(id,nextKey),50);
+    }
+  }
+}
+
+function saveAllocCell(id,key,inp){
+  if(inp.dataset.cancel==='1'){ render(); return; }
+  const r=state.resources.find(r=>r.id===id); if(!r){ render(); return; }
+  let val=parseFloat(inp.value);
+  if(isNaN(val)) val=0;
+  if(val>1) val=val/100;
+  val=Math.max(0,Math.min(1,val));
+  val=Math.round(val*20)/20;
+  r.allocations[key]=val;
+  render();
+}
+
+function parseAllocInput(val){
+  if(isNaN(val)) return 0;
+  if(val>1) val=val/100;
+  return Math.max(0,Math.min(1,Math.round(val*20)/20));
+}
+
+function bulkSetValue(){
+  const input=prompt('Set allocation for selected cells (0-100%):','100');
+  if(input===null) return;
+  let val=parseAllocInput(parseFloat(input));
+  cellSelection.cells.forEach(c=>{
+    const r=state.resources.find(r=>r.id===c.id);
+    if(r) r.allocations[c.key]=val;
+  });
+  render();
+}
+
+function bulkClear(){
+  cellSelection.cells.forEach(c=>{
+    const r=state.resources.find(r=>r.id===c.id);
+    if(r) r.allocations[c.key]=0;
+  });
+  render();
+}
+
+function bulkFull(){
+  cellSelection.cells.forEach(c=>{
+    const r=state.resources.find(r=>r.id===c.id);
+    if(r) r.allocations[c.key]=1;
+  });
+  render();
+}
+
+function bulkHalf(){
+  cellSelection.cells.forEach(c=>{
+    const r=state.resources.find(r=>r.id===c.id);
+    if(r) r.allocations[c.key]=0.5;
+  });
+  render();
+}
+
+// ── COPY / PASTE (Ctrl+C, Ctrl+V) ──
+document.addEventListener('keydown',function(ev){
+  // Only handle if we have cell selection and no input is focused
+  if(document.activeElement&&(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='SELECT'||document.activeElement.tagName==='TEXTAREA')) return;
+
+  if((ev.ctrlKey||ev.metaKey)&&ev.key==='c'&&cellSelection.cells.length>0){
+    ev.preventDefault();
+    copyCells();
+  }
+  if((ev.ctrlKey||ev.metaKey)&&ev.key==='v'&&cellSelection.cells.length>0){
+    ev.preventDefault();
+    pasteCells();
+  }
+  if(ev.key==='Delete'&&cellSelection.cells.length>0){
+    ev.preventDefault();
+    bulkClear();
+  }
+  if(ev.key==='Escape'&&cellSelection.cells.length>0){
+    clearSelection();
+  }
+});
+
+function copyCells(){
+  const weeks=getWeeks();
+  const wkKeys=weeks.map(w=>w.key);
+  const resIds=state.resources.map(r=>r.id);
+
+  // Determine bounding box
+  let minR=Infinity,maxR=-1,minC=Infinity,maxC=-1;
+  cellSelection.cells.forEach(c=>{
+    const ri=resIds.indexOf(c.id), ci=wkKeys.indexOf(c.key);
+    if(ri<minR) minR=ri; if(ri>maxR) maxR=ri;
+    if(ci<minC) minC=ci; if(ci>maxC) maxC=ci;
+  });
+
+  // Store relative positions + values
+  cellSelection.clipboard=[];
+  cellSelection.cells.forEach(c=>{
+    const ri=resIds.indexOf(c.id), ci=wkKeys.indexOf(c.key);
+    const r=state.resources.find(r=>r.id===c.id);
+    cellSelection.clipboard.push({row:ri-minR,col:ci-minC,val:r?r.allocations[c.key]??0:0});
+  });
+
+  // Also put tab-separated text into system clipboard
+  const rows=maxR-minR+1, colsN=maxC-minC+1;
+  const grid=Array.from({length:rows},()=>Array(colsN).fill(''));
+  cellSelection.clipboard.forEach(c=>{ grid[c.row][c.col]=Math.round(c.val*100)+'%'; });
+  const text=grid.map(r=>r.join('\t')).join('\n');
+  navigator.clipboard.writeText(text).catch(()=>{});
+
+  // Flash feedback
+  const tb=document.getElementById('selToolbar');
+  if(tb){ const orig=tb.style.background; tb.style.background='#2d6b3f'; setTimeout(()=>tb.style.background=orig,300); }
+}
+
+function pasteCells(){
+  const weeks=getWeeks();
+  const wkKeys=weeks.map(w=>w.key);
+  const resIds=state.resources.map(r=>r.id);
+
+  if(cellSelection.clipboard.length>0&&cellSelection.cells.length>0){
+    // Paste from internal clipboard relative to first selected cell
+    const anchor=cellSelection.cells[0];
+    const anchorR=resIds.indexOf(anchor.id), anchorC=wkKeys.indexOf(anchor.key);
+    if(anchorR<0||anchorC<0) return;
+
+    cellSelection.clipboard.forEach(c=>{
+      const targetR=anchorR+c.row, targetC=anchorC+c.col;
+      if(targetR>=0&&targetR<resIds.length&&targetC>=0&&targetC<wkKeys.length){
+        const r=state.resources.find(r=>r.id===resIds[targetR]);
+        if(r) r.allocations[wkKeys[targetC]]=c.val;
+      }
+    });
+    render();
+    return;
+  }
+
+  // Try system clipboard (tab-separated)
+  navigator.clipboard.readText().then(text=>{
+    if(!text) return;
+    const rows=text.trim().split('\n').map(r=>r.split('\t'));
+    const anchor=cellSelection.cells[0];
+    const anchorR=resIds.indexOf(anchor.id), anchorC=wkKeys.indexOf(anchor.key);
+    if(anchorR<0||anchorC<0) return;
+
+    rows.forEach((row,ri)=>{
+      row.forEach((cell,ci)=>{
+        const targetR=anchorR+ri, targetC=anchorC+ci;
+        if(targetR>=0&&targetR<resIds.length&&targetC>=0&&targetC<wkKeys.length){
+          let val=parseFloat(cell.replace('%',''));
+          val=parseAllocInput(val);
+          const r=state.resources.find(r=>r.id===resIds[targetR]);
+          if(r) r.allocations[wkKeys[targetC]]=val;
+        }
+      });
+    });
+    render();
+  }).catch(()=>{});
+}
+
+function mark(id,invalid){
+  document.getElementById(id).classList.toggle('invalid',invalid);
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+function render(){
+  const weeks=getWeeks();
+  const table=document.getElementById('rlsTable');
+  const empty=document.getElementById('emptyState');
+
+  updateBudgetBar(weeks);
+  updateSummary(weeks);
+  updateBudgetInsight(weeks);
+  renderSuggestions(weeks);
+
+  // Show/hide fit bar when budget + resources exist
+  const fitBar=document.getElementById('fitBar');
+  fitBar.style.display=(getBudget()>0&&state.resources.length>0)?'flex':'none';
+
+  // Show/hide export button & view toggle
+  const hasData=getStartDate()&&state.resources.length>0;
+  document.getElementById('btnExport').style.display=hasData?'inline-flex':'none';
+  document.getElementById('viewToggle').style.display=hasData?'inline-flex':'none';
+
+  if(!getStartDate()||state.resources.length===0){
+    table.style.display='none'; empty.style.display='block';
+    empty.innerHTML=!getStartDate()
+      ?'<div class="empty-icon">📅</div><p>Set a <strong>Start Date</strong> to activate the timeline</p>'
+      :'<div class="empty-icon">👤</div><p>Add resources using the form above</p>';
+    document.getElementById('ganttCard').style.display='none';
+    return;
+  }
+  empty.style.display='none'; table.style.display='';
+  table.innerHTML=buildTable(weeks);
+  updateSelectionUI();
+  renderGantt(weeks);
+}
+
+function setView(mode){
+  state.viewMode=mode;
+  document.querySelectorAll('#viewToggle button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  render();
+}
+
+function buildTable(weeks){
+  // View mode columns
+  const vm=state.viewMode;
+  let cols=[]; // {key, label, sub, phColor, wkKeys:[]}
+
+  if(vm==='days'){
+    // Expand each week into 5 working days (Mon-Fri)
+    const start=getStartDate();
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(start.getTime()+wi*7*86400000);
+      for(let d=0;d<5;d++){
+        const dd=new Date(wkDate.getTime()+d*86400000);
+        cols.push({key:wk.key,dayFrac:1/5,label:dd.toLocaleDateString('en-US',{weekday:'short'}),sub:fmtDateShort(dd),phColor:wk.phColor,phase:wk.phase,wkKey:wk.key});
+      }
+    });
+  } else if(vm==='months'){
+    // Group weeks into calendar months
+    const start=getStartDate();
+    let curMonth='';
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(start.getTime()+wi*7*86400000);
+      const m=wkDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      if(!cols.length||cols[cols.length-1].label!==m)
+        cols.push({label:m,sub:'',phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]});
+      else
+        cols[cols.length-1].wkKeys.push(wk.key);
+    });
+  } else {
+    weeks.forEach(wk=>cols.push({label:wk.label,sub:wk.date,phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]}));
+  }
+
+  // Group consecutive same-phase columns for header band
+  const groups=[];
+  cols.forEach(c=>{
+    if(!groups.length||groups[groups.length-1].phase!==c.phase)
+      groups.push({phase:c.phase,color:c.phColor,count:0});
+    groups[groups.length-1].count++;
+  });
+
+  const LC=4, RC=5;
+
+  const phRow=groups.map(g=>`<th class="ph-${g.color}" colspan="${g.count}" style="padding:6px 8px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border:1px solid rgba(0,0,0,.1)">${esc(g.phase)}</th>`).join('');
+
+  const colHdr=cols.map(c=>`<th class="wk-sub-${c.phColor}" style="padding:5px 4px;border:1px solid var(--border);min-width:${vm==='days'?'34px':'46px'}">
+    <span class="wk-label" style="font-size:${vm==='days'?'.56rem':'.66rem'}">${c.label}</span>
+    ${c.sub?`<span class="wk-date">${c.sub}</span>`:''}
+  </th>`).join('');
+
+  const badge=(loc)=>loc==='Offshore'?'b-off':loc==='Onsite'?'b-on':'b-ns';
+
+  // Resource rows
+  const resRows=state.resources.map(r=>{
+    let cells='';
+    if(vm==='days'){
+      cells=cols.map(c=>{
+        const v=r.allocations[c.wkKey]??0;
+        const cls=v===0?'ac-0':v<1?'ac-05':'ac-1';
+        const pct=Math.round(v*100);
+        return `<td class="ac ${cls}" data-rid="${r.id}" data-wk="${c.wkKey}" onmousedown="cellMouseDown(event,${r.id},'${c.wkKey}')" ondblclick="cellDblClick(event,${r.id},'${c.wkKey}')" style="min-width:34px;width:34px;" title="${pct}% — click to edit, shift+click range"><span class="ac-val" style="font-size:.56rem">${v===0?'':pct+'%'}</span></td>`;
+      }).join('');
+    } else if(vm==='months'){
+      cells=cols.map(c=>{
+        const totalAlloc=c.wkKeys.reduce((s,k)=>s+(r.allocations[k]??0),0);
+        const avg=totalAlloc/c.wkKeys.length;
+        const cls=avg===0?'ac-0':avg<0.75?'ac-05':'ac-1';
+        const pct=Math.round(avg*100);
+        return `<td class="ac ${cls}" style="min-width:60px;" title="Avg ${pct}% (read-only in month view)"><span class="ac-val">${avg===0?'':pct+'%'}</span></td>`;
+      }).join('');
+    } else {
+      cells=weeks.map(wk=>{
+        const v=r.allocations[wk.key]??0;
+        const cls=v===0?'ac-0':v<1?'ac-05':'ac-1';
+        const pct=Math.round(v*100);
+        return `<td class="ac ${cls}" data-rid="${r.id}" data-wk="${wk.key}" onmousedown="cellMouseDown(event,${r.id},'${wk.key}')" ondblclick="cellDblClick(event,${r.id},'${wk.key}')" title="${pct}% — click to edit, shift+click range"><span class="ac-val">${v===0?'':pct+'%'}</span></td>`;
+      }).join('');
+    }
+    const {days,rev,cst,activeWks}=calcRes(r,weeks);
+    return `<tr>
+      <td class="c-res">${esc(r.role)}</td>
+      <td class="c-loc"><span class="badge ${badge(r.location)}">${r.location}</span></td>
+      <td class="c-rate">${fmt$(r.rate)}</td>
+      <td class="c-cost">${fmt$(r.cost)}</td>
+      ${cells}
+      <td class="c-twk">${activeWks}</td>
+      <td class="c-tday">${days}</td>
+      <td class="c-rev">${fmt$(rev)}</td>
+      <td class="c-cst">${fmt$(cst)}</td>
+      <td class="c-actions"><button class="btn btn-sm btn-edit btn-icon" onclick="openEditModal(${r.id})" title="Edit">&#9998;</button><button class="btn btn-sm btn-danger btn-icon" onclick="deleteResource(${r.id})" title="Delete">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  // Grand totals
+  const {days,rev,cst}=calcGrand(weeks);
+  const margin=rev>0?((rev-cst)/rev*100):0;
+  const marginColor=margin>=40?'var(--green)':margin>=20?'#e8960a':var_red();
+  const colCount=cols.length;
+
+  return `<thead>
+    <tr>
+      <th colspan="${LC}" style="background:var(--navy);border-color:#2d3f6b"></th>
+      ${phRow}
+      <th colspan="${RC}" style="background:var(--navy);border-color:#2d3f6b"></th>
+    </tr>
+    <tr>
+      <th class="rls-h left c-res">Resource</th>
+      <th class="rls-h c-loc">Location</th>
+      <th class="rls-h c-rate">Rate/Hr</th>
+      <th class="rls-h c-cost">Cost/Hr</th>
+      ${colHdr}
+      <th class="rls-h c-twk">Wks</th>
+      <th class="rls-h c-tday">Days</th>
+      <th class="rls-h c-rev">Revenue</th>
+      <th class="rls-h c-cst">Cost</th>
+      <th class="rls-h" style="width:80px"></th>
+    </tr>
+  </thead>
+  <tbody>${resRows}</tbody>
+  <tfoot>
+    <tr class="gt-row">
+      <td colspan="${LC}" style="text-align:left;font-family:var(--sans);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase">TOTAL</td>
+      <td colspan="${colCount}"></td>
+      <td style="text-align:center">—</td>
+      <td style="text-align:center">${days}</td>
+      <td style="text-align:right">${fmt$(rev)}</td>
+      <td style="text-align:right">${fmt$(cst)}</td>
+      <td></td>
+    </tr>
+    <tr class="margin-row">
+      <td colspan="${LC+colCount+3}" style="border:none;background:transparent"></td>
+      <td style="text-align:right;color:var(--muted);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;border-color:var(--border)">Margin</td>
+      <td style="background:${marginColor};color:white;font-weight:700;text-align:center;border-radius:0 0 4px 0;border-color:${marginColor}">${margin.toFixed(2)}%</td>
+    </tr>
+  </tfoot>`;
+}
+
+function var_red(){ return 'var(--red)'; }
+
+function updateBudgetBar(weeks){
+  const budget=getBudget();
+  const {rev}=calcGrand(weeks);
+  const wrap=document.getElementById('bbarWrap');
+  if(budget<=0){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  const pct=Math.min(110,rev/budget*100);
+  const fill=document.getElementById('bbarFill');
+  fill.style.width=Math.min(100,pct)+'%';
+  fill.style.background=pct>100?'var(--red)':pct>80?'#e8960a':'var(--green)';
+  document.getElementById('bbarLabel').textContent=`Budget used: ${fmt$(rev)} / ${fmt$(budget)}`;
+  document.getElementById('bbarPct').textContent=pct.toFixed(1)+'%';
+  document.getElementById('bbarPct').style.color=pct>100?'var(--red)':pct>80?'#e8960a':'var(--green)';
+}
+
+function updateBudgetInsight(weeks){
+  const budget=getBudget();
+  const el=document.getElementById('budgetInsight');
+  if(!budget){
+    el.textContent='Set a budget to see capacity analysis.';
+    return;
+  }
+  const {rev,cst,days}=calcGrand(weeks);
+  const remaining=budget-rev;
+  const totalWks=totalPhaseWeeks();
+
+  if(state.resources.length===0){
+    el.textContent='Add resources to calculate weekly burn rate.';
+    return;
+  }
+
+  // Weekly burn rate (revenue)
+  const weeklyRev=totalWks>0?rev/totalWks:0;
+  const weeksLeft=weeklyRev>0?Math.floor(remaining/weeklyRev):0;
+  const endFromBudget=getStartDate()&&weeklyRev>0?new Date(getStartDate().getTime()+(totalWks+weeksLeft)*7*86400000):null;
+
+  el.innerHTML=`
+    <div>Weekly burn: <strong>${fmt$(weeklyRev)}</strong></div>
+    <div>Remaining budget: <strong style="color:${remaining<0?'var(--red)':''}">${fmt$(remaining)}</strong></div>
+    ${remaining>0&&weeklyRev>0?`<div>Extra runway: <strong>~${weeksLeft} wk(s)</strong></div>`:''}
+    ${remaining<0?`<div style="color:var(--red);font-weight:600">⚠ Over budget by ${fmt$(Math.abs(remaining))}</div>`:''}
+    <div style="margin-top:6px;font-size:.65rem;color:var(--muted)">Margin: ${rev>0?((rev-cst)/rev*100).toFixed(1):0}% &nbsp;|&nbsp; ${days} person-days</div>
+  `;
+}
+
+function updateSummary(weeks){
+  const {days,rev,cst}=calcGrand(weeks);
+  const margin=rev>0?((rev-cst)/rev*100):0;
+  const end=calcEndDate();
+  document.getElementById('sTotalWk').textContent=totalPhaseWeeks()||'—';
+  document.getElementById('sTotalPD').textContent=days||'—';
+  document.getElementById('sTotalRev').textContent=rev?fmt$(rev):'—';
+  document.getElementById('sTotalCst').textContent=cst?fmt$(cst):'—';
+  document.getElementById('sMargin').textContent=rev?margin.toFixed(2)+'%':'—';
+  document.getElementById('sEndDate').textContent=end?fmtDateFull(end):'—';
+  document.getElementById('personDaysDisplay').value=days||'';
+}
+
+// ═══════════════════════════════════════════
+//  FIT TO BUDGET
+// ═══════════════════════════════════════════
+function fitToBudget(){
+  const budget=getBudget();
+  if(!budget){alert('Please set a budget first.');return;}
+  if(state.resources.length===0){alert('Add resources first.');return;}
+  const weeks=getWeeks();
+  if(!weeks.length){alert('Set a start date and phases first.');return;}
+
+  // If target end date is set, remove weeks beyond it
+  const targetEnd=document.getElementById('targetEndDate').value;
+  let activeWeekKeys=new Set(weeks.map(w=>w.key));
+  if(targetEnd){
+    const tEnd=new Date(targetEnd+'T00:00:00');
+    const start=getStartDate();
+    if(tEnd>start){
+      const maxWeeks=Math.ceil((tEnd-start)/(7*86400000));
+      activeWeekKeys=new Set();
+      for(let i=1;i<=Math.min(maxWeeks,weeks.length);i++) activeWeekKeys.add('wk'+i);
+      // Zero out weeks beyond target
+      state.resources.forEach(r=>{
+        weeks.forEach(wk=>{
+          if(!activeWeekKeys.has(wk.key)) r.allocations[wk.key]=0;
+        });
+      });
+    }
+  }
+
+  // Calculate current revenue for active weeks only
+  const activeWks=weeks.filter(w=>activeWeekKeys.has(w.key));
+  let currentRev=0;
+  state.resources.forEach(r=>{
+    activeWks.forEach(wk=>{ currentRev+=(r.allocations[wk.key]??0)*5*8*r.rate; });
+  });
+
+  if(currentRev<=0){alert('No active allocations to adjust.');return;}
+
+  // Scale factor
+  const scale=budget/currentRev;
+
+  // Apply scaling: try to keep values at 0, 0.5, or 1 boundaries
+  state.resources.forEach(r=>{
+    activeWks.forEach(wk=>{
+      const cur=r.allocations[wk.key]??0;
+      if(cur===0) return;
+      let nv=cur*scale;
+      // Snap to nearest: 0, 0.5, 1
+      if(nv<0.25) nv=0;
+      else if(nv<0.75) nv=0.5;
+      else nv=1;
+      r.allocations[wk.key]=nv;
+    });
+  });
+
+  // Fine-tune: if still over budget, drop lowest-rate resources first
+  let postRev=0;
+  state.resources.forEach(r=>{ activeWks.forEach(wk=>{ postRev+=(r.allocations[wk.key]??0)*5*8*r.rate; }); });
+  if(postRev>budget){
+    const sorted=[...state.resources].sort((a,b)=>a.rate-b.rate);
+    for(const r of sorted){
+      if(postRev<=budget) break;
+      for(const wk of [...activeWks].reverse()){
+        if(postRev<=budget) break;
+        const cur=r.allocations[wk.key]??0;
+        if(cur>0){
+          const drop=cur===1?0.5:0;
+          const saved=(cur-drop)*5*8*r.rate;
+          r.allocations[wk.key]=drop;
+          postRev-=saved;
+        }
+      }
+    }
+  }
+
+  render();
+}
+
+function resetAllocations(){
+  if(!confirm('Reset all allocations to full (1.0)?')) return;
+  const weeks=getWeeks();
+  state.resources.forEach(r=>{
+    weeks.forEach(wk=>{ r.allocations[wk.key]=1; });
+  });
+  render();
+}
+
+// ═══════════════════════════════════════════
+//  EXECUTIVE TIMELINE (GANTT)
+// ═══════════════════════════════════════════
+let ganttViewMode='weeks';
+
+function setGanttView(mode){
+  ganttViewMode=mode;
+  document.querySelectorAll('#ganttViewToggle button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderGantt(getWeeks());
+}
+
+function renderGantt(weeks){
+  const card=document.getElementById('ganttCard');
+  const wrap=document.getElementById('ganttWrap');
+  if(!weeks.length||state.resources.length===0){ card.style.display='none'; return; }
+  card.style.display='block';
+
+  const start=getStartDate();
+  const gvm=ganttViewMode;
+  let cols=[]; // {label, sub, phColor, phase, wkKeys:[]}
+
+  if(gvm==='days'){
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(start.getTime()+wi*7*86400000);
+      for(let d=0;d<5;d++){
+        const dd=new Date(wkDate.getTime()+d*86400000);
+        cols.push({label:dd.toLocaleDateString('en-US',{weekday:'short'}),sub:fmtDateShort(dd),phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key],dayFrac:1/5});
+      }
+    });
+  } else if(gvm==='months'){
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(start.getTime()+wi*7*86400000);
+      const m=wkDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      if(!cols.length||cols[cols.length-1].label!==m)
+        cols.push({label:m,sub:'',phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]});
+      else
+        cols[cols.length-1].wkKeys.push(wk.key);
+    });
+  } else {
+    weeks.forEach(wk=>cols.push({label:wk.label,sub:wk.date,phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]}));
+  }
+
+  // Phase groups for header band
+  const groups=[];
+  cols.forEach(c=>{
+    if(!groups.length||groups[groups.length-1].phase!==c.phase)
+      groups.push({phase:c.phase,color:c.phColor,count:0});
+    groups[groups.length-1].count++;
+  });
+
+  const phHdr=groups.map(g=>`<th class="ph-${g.color}" colspan="${g.count}" style="padding:5px 6px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border:1px solid rgba(0,0,0,.1)">${esc(g.phase)}</th>`).join('');
+
+  const colHdr=cols.map(c=>`<th class="wk-sub-${c.phColor}" style="padding:4px 3px;font-size:.58rem;min-width:${gvm==='days'?'28px':gvm==='months'?'60px':'38px'};text-align:center;"><span style="font-weight:700;display:block;font-size:${gvm==='days'?'.5rem':'.58rem'}">${c.label}</span>${c.sub?`<span style="font-size:.52rem;color:#8090a8;">${c.sub}</span>`:''}</th>`).join('');
+
+  // Resource rows with Gantt bars
+  let rows='';
+  state.resources.forEach(r=>{
+    let cells='';
+    if(gvm==='days'){
+      cells=cols.map(c=>{
+        const v=r.allocations[c.wkKeys[0]]??0;
+        if(v===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
+        const barClass='gantt-bar-'+c.phColor;
+        const opacity=v<1?'opacity:.55;':'';
+        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}height:14px;" title="${r.role}: ${v}"></div></td>`;
+      }).join('');
+    } else if(gvm==='months'){
+      cells=cols.map(c=>{
+        const totalAlloc=c.wkKeys.reduce((s,k)=>s+(r.allocations[k]??0),0);
+        const avg=totalAlloc/c.wkKeys.length;
+        if(avg===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
+        const barClass='gantt-bar-'+c.phColor;
+        const opacity=avg<0.75?'opacity:.55;':'';
+        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}" title="${r.role}: avg ${avg.toFixed(1)}"></div></td>`;
+      }).join('');
+    } else {
+      cells=cols.map(c=>{
+        const v=r.allocations[c.wkKeys[0]]??0;
+        if(v===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
+        const barClass='gantt-bar-'+c.phColor;
+        const opacity=v<1?'opacity:.55;':'';
+        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}" title="${r.role} - ${c.label}: ${v}"></div></td>`;
+      }).join('');
+    }
+
+    const {days,rev}=calcRes(r,weeks);
+    rows+=`<tr>
+      <td style="padding:6px 10px;white-space:nowrap;"><span class="gantt-role">${esc(r.role)}</span><br><span class="gantt-loc">${r.location} &middot; ${days}d &middot; ${fmt$(rev)}</span></td>
+      ${cells}
+    </tr>`;
+  });
+
+  // Phase completion flags
+  let milestones='';
+  let cumCol=0;
+  const flagIcons=['🏁','🚩','🎯','⛳','�'];
+  groups.forEach((g,gi)=>{
+    cumCol+=g.count;
+    const icon=flagIcons[gi%flagIcons.length];
+    milestones+=`<tr class="milestone-row">
+      <td style="padding:8px 10px;">
+        <span class="phase-flag flag-${g.color}">
+          <span class="flag-icon">${icon}</span>
+          ${esc(g.phase)} Complete
+        </span>
+      </td>`;
+    for(let c=0;c<cols.length;c++){
+      if(c===cumCol-1){
+        milestones+=`<td style="text-align:center;padding:6px;">
+          <span class="phase-flag phase-flag-col flag-${g.color}">
+            <span class="flag-icon">${icon}</span>
+          </span>
+        </td>`;
+      } else {
+        milestones+='<td style="border-bottom:2px dashed '+({dev:'#7a9fd4',test:'#d4a030',uat:'#5cb878',golive:'#9a6ed0',other:'#999'}[g.color]||'#ccc')+';"></td>';
+      }
+    }
+    milestones+='</tr>';
+  });
+
+  // Grand total row
+  const {days:gDays,rev:gRev,cst:gCst}=calcGrand(weeks);
+  const gMargin=gRev>0?((gRev-gCst)/gRev*100).toFixed(1):0;
+
+  wrap.innerHTML=`
+    <table class="gantt-table">
+      <thead>
+        <tr><th style="min-width:160px;"></th>${phHdr}</tr>
+        <tr><th style="text-align:left;padding:5px 10px;">Resource</th>${colHdr}</tr>
+      </thead>
+      <tbody>
+        ${rows}
+        ${milestones}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--navy);color:white;font-weight:700;font-size:.68rem;">
+          <td style="padding:8px 10px;border-color:#2d3f6b;">TOTAL: ${gDays} days &middot; Rev ${fmt$(gRev)} &middot; Cost ${fmt$(gCst)} &middot; Margin ${gMargin}%</td>
+          <td colspan="${cols.length}" style="border-color:#2d3f6b;"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="gantt-legend">
+      ${groups.map(g=>`<div class="gantt-legend-item"><div class="gantt-legend-color gantt-bar-${g.color}"></div>${esc(g.phase)}</div>`).join('')}
+      <div class="gantt-legend-item" style="margin-left:auto;font-style:italic;">Lighter bars = partial allocation</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT TO EXCEL
+// ═══════════════════════════════════════════
+function colLetter(idx){
+  let s='';
+  while(idx>=0){ s=String.fromCharCode(65+(idx%26))+s; idx=Math.floor(idx/26)-1; }
+  return s;
+}
+
+function exportToExcel(){
+  const weeks=getWeeks();
+  if(!weeks.length||state.resources.length===0){alert('Nothing to export.');return;}
+
+  const wb=XLSX.utils.book_new();
+  const vm=state.viewMode;
+  const projStart=getStartDate();
+
+  // ── Build columns matching current view mode ──
+  let cols=[];
+  if(vm==='days'){
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(projStart.getTime()+wi*7*86400000);
+      for(let d=0;d<5;d++){
+        const dd=new Date(wkDate.getTime()+d*86400000);
+        cols.push({label:dd.toLocaleDateString('en-US',{weekday:'short'}),sub:fmtDateShort(dd),phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key],isDayOf:wk.key});
+      }
+    });
+  } else if(vm==='months'){
+    weeks.forEach((wk,wi)=>{
+      const wkDate=new Date(projStart.getTime()+wi*7*86400000);
+      const m=wkDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      if(!cols.length||cols[cols.length-1].label!==m)
+        cols.push({label:m,sub:'',phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]});
+      else
+        cols[cols.length-1].wkKeys.push(wk.key);
+    });
+  } else {
+    weeks.forEach(wk=>cols.push({label:wk.label,sub:wk.date,phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]}));
+  }
+  const N=cols.length;
+  const viewLabel=vm==='days'?'Days':vm==='months'?'Months':'Weeks';
+
+  // ── Color maps matching the HTML UI ──
+  const phBg={dev:'CCD9F5',test:'FDE6A0',uat:'B8E8C0',golive:'DBC8F5',other:'D4D4D4'};
+  const phFg={dev:'1A3A7A',test:'6A3E00',uat:'0E4A22',golive:'3C1A68',other:'333333'};
+  const wkSubBg={dev:'E8EEFB',test:'FEF5DC',uat:'E5F5E8',golive:'F0E8FB',other:'EBEBEB'};
+  const navyBg='1A2744', navyFg='FFFFFF';
+  const acBg0='F0F2F8', acBg05='A8C4F0', acBg1='3B6FD4';
+  const revBg='EDF2FF', revFg='1A3A8A', cstBg='FFF8ED', cstFg='7A4000';
+  const greenHex='1D9E60', orangeHex='E8960A', redHex='D9534F';
+  const sumBg='F5F7FC';
+
+  const thinBorder={style:'thin',color:{rgb:'D2D8E8'}};
+  const border={top:thinBorder,bottom:thinBorder,left:thinBorder,right:thinBorder};
+  const sFont={name:'Sora',sz:9};
+  const sFontBold={name:'Sora',sz:9,bold:true};
+  const monoFont={name:'DM Mono',sz:9};
+  const monoFontBold={name:'DM Mono',sz:9,bold:true};
+
+  // Layout
+  const firstWkCol=4;
+  const lastWkCol=firstWkCol+N-1;
+  const colActWk=lastWkCol+1;
+  const colPD=colActWk+1;
+  const colRev=colPD+1;
+  const colCst=colRev+1;
+  const totalCols=colCst+1;
+
+  // Phase groups for merged header
+  const groups=[];
+  cols.forEach(c=>{
+    if(!groups.length||groups[groups.length-1].phase!==c.phase)
+      groups.push({phase:c.phase,color:c.phColor,count:0,wkKeys:[]});
+    groups[groups.length-1].count++;
+    c.wkKeys.forEach(k=>{if(!groups[groups.length-1].wkKeys.includes(k))groups[groups.length-1].wkKeys.push(k);});
+  });
+
+  // ── Row 0: Phase header band ──
+  const row0=new Array(totalCols).fill('');
+  row0[0]=state.projectName||'Resource Loading Sheet';
+  let phIdx=firstWkCol;
+  groups.forEach(g=>{ row0[phIdx]=g.phase.toUpperCase(); phIdx+=g.count; });
+
+  // ── Row 1: Column headers ──
+  const row1=['Resource','Location','Rate/Hr ($)','Cost/Hr ($)'];
+  cols.forEach(c=>row1.push(c.label+(c.sub?'\n'+c.sub:'')));
+  row1.push('Active '+viewLabel,'Person Days','Revenue ($)','Cost ($)');
+
+  const data=[row0,row1];
+
+  // ── Resource rows ──
+  const dataStartRow=3;
+  state.resources.forEach(r=>{
+    const rowArr=[r.role, r.location, r.rate, r.cost];
+    cols.forEach(c=>{
+      if(vm==='months'){
+        const total=c.wkKeys.reduce((s,k)=>s+(r.allocations[k]??0),0);
+        rowArr.push(total/c.wkKeys.length);
+      } else {
+        rowArr.push(r.allocations[c.wkKeys[0]]??0);
+      }
+    });
+    rowArr.push(0,0,0,0);
+    data.push(rowArr);
+  });
+
+  // TOTAL + MARGIN rows
+  const totalExRow=dataStartRow+state.resources.length;
+  const totalArr=new Array(totalCols).fill('');
+  totalArr[0]='TOTAL';
+  data.push(totalArr);
+  const marginExRow=totalExRow+1;
+  const marginArr=new Array(totalCols).fill('');
+  data.push(marginArr);
+
+  const ws=XLSX.utils.aoa_to_sheet(data);
+
+  // ═══ STYLING ═══
+
+  // Helper: apply style to cell
+  function sty(addr,style){
+    if(!ws[addr]) ws[addr]={t:'s',v:''};
+    ws[addr].s=style;
+  }
+
+  // Row 0: Project name + Phase headers
+  for(let c=0;c<totalCols;c++){
+    const addr=colLetter(c)+'1';
+    if(c<firstWkCol){
+      sty(addr,{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:11,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center',vertical:'center'},border});
+    } else if(c<=lastWkCol){
+      const col=cols[c-firstWkCol];
+      const pc=col?col.phColor:'other';
+      sty(addr,{fill:{fgColor:{rgb:phBg[pc]||phBg.other}},font:{name:'Sora',sz:9,bold:true,color:{rgb:phFg[pc]||phFg.other}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border});
+    } else {
+      sty(addr,{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:8,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center'},border});
+    }
+  }
+
+  // Row 1: Column headers (navy background)
+  for(let c=0;c<totalCols;c++){
+    const addr=colLetter(c)+'2';
+    if(c>=firstWkCol&&c<=lastWkCol){
+      const col=cols[c-firstWkCol];
+      const pc=col?col.phColor:'other';
+      sty(addr,{fill:{fgColor:{rgb:wkSubBg[pc]||wkSubBg.other}},font:{name:'Sora',sz:8,bold:true,color:{rgb:phFg[pc]||phFg.other}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border});
+    } else {
+      sty(addr,{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:8,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border});
+    }
+  }
+
+  // Resource rows styling + formulas
+  const firstResRow=dataStartRow;
+  const lastResRow=dataStartRow+state.resources.length-1;
+
+  state.resources.forEach((r,ri)=>{
+    const exRow=dataStartRow+ri;
+    const rowStr=''+exRow;
+
+    // A: Role
+    sty('A'+rowStr,{font:sFontBold,alignment:{horizontal:'left'},border});
+    // B: Location with color
+    const locColor=r.location==='Offshore'?'3B6FD4':r.location==='Onsite'?'E06C10':'1D9E60';
+    sty('B'+rowStr,{font:{name:'Sora',sz:8,bold:true,color:{rgb:locColor}},alignment:{horizontal:'center'},border});
+    // C: Rate
+    sty('C'+rowStr,{font:monoFont,numFmt:'$#,##0.00',alignment:{horizontal:'right'},border});
+    // D: Cost
+    sty('D'+rowStr,{font:monoFont,numFmt:'$#,##0.00',alignment:{horizontal:'right'},border});
+
+    // Allocation cells - color coded per view mode
+    cols.forEach((col,ci)=>{
+      const addr=colLetter(firstWkCol+ci)+rowStr;
+      let v;
+      if(vm==='months'){
+        v=col.wkKeys.reduce((s,k)=>s+(r.allocations[k]??0),0)/col.wkKeys.length;
+      } else {
+        v=r.allocations[col.wkKeys[0]]??0;
+      }
+      const bg=v===0?acBg0:v<1?acBg05:acBg1;
+      const fg=v>=1?'FFFFFF':'1A2744';
+      sty(addr,{fill:{fgColor:{rgb:bg}},font:{name:'DM Mono',sz:9,bold:v>0,color:{rgb:fg}},numFmt:'0%',alignment:{horizontal:'center',vertical:'center'},border});
+    });
+
+    // Formula cells
+    const firstWkLtr=colLetter(firstWkCol);
+    const lastWkLtr=colLetter(lastWkCol);
+    const rateCell='C'+rowStr;
+    const costCell='D'+rowStr;
+    const pdCell=colLetter(colPD)+rowStr;
+    const wkRange=firstWkLtr+rowStr+':'+lastWkLtr+rowStr;
+
+    // Active columns
+    ws[colLetter(colActWk)+rowStr]={t:'n',f:`COUNTIF(${wkRange},">0")`,s:{fill:{fgColor:{rgb:sumBg}},font:monoFontBold,alignment:{horizontal:'center'},border}};
+    // Person Days: weeks=SUM*5, days=SUM (each col is 1 day alloc), months=SUM*5*weeksPerMonth
+    const pdFormula=vm==='days'?`SUM(${wkRange})`:vm==='months'?`SUM(${wkRange})*5*${(weeks.length/cols.length).toFixed(1)}`:`SUM(${wkRange})*5`;
+    ws[colLetter(colPD)+rowStr]={t:'n',f:pdFormula,s:{fill:{fgColor:{rgb:sumBg}},font:monoFontBold,alignment:{horizontal:'center'},border}};
+    // Revenue
+    ws[colLetter(colRev)+rowStr]={t:'n',f:`${pdCell}*8*${rateCell}`,s:{fill:{fgColor:{rgb:revBg.replace('#','')}},font:{name:'DM Mono',sz:9,bold:true,color:{rgb:revFg}},numFmt:'$#,##0.00',alignment:{horizontal:'right'},border}};
+    // Cost
+    ws[colLetter(colCst)+rowStr]={t:'n',f:`${pdCell}*8*${costCell}`,s:{fill:{fgColor:{rgb:cstBg.replace('#','')}},font:{name:'DM Mono',sz:9,bold:true,color:{rgb:cstFg}},numFmt:'$#,##0.00',alignment:{horizontal:'right'},border}};
+  });
+
+  // ── TOTAL row styling + formulas ──
+  const totalStyle={fill:{fgColor:{rgb:navyBg}},font:{name:'DM Mono',sz:10,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center'},border:{top:{style:'medium',color:{rgb:'1A2744'}},bottom:{style:'medium',color:{rgb:'1A2744'}},left:thinBorder,right:thinBorder}};
+  const totalStyleLeft={...totalStyle,alignment:{horizontal:'left'}};
+  const totalStyleRight={...totalStyle,alignment:{horizontal:'right'},numFmt:'$#,##0.00'};
+
+  for(let c=0;c<totalCols;c++){
+    const addr=colLetter(c)+totalExRow;
+    if(c===0) sty(addr,totalStyleLeft);
+    else if(c===colRev||c===colCst) sty(addr,totalStyleRight);
+    else sty(addr,totalStyle);
+  }
+
+  for(let c=firstWkCol;c<=lastWkCol;c++){
+    const cl=colLetter(c);
+    ws[cl+totalExRow]={t:'n',f:`SUM(${cl}${firstResRow}:${cl}${lastResRow})`,s:totalStyle};
+  }
+  ws[colLetter(colActWk)+totalExRow]={t:'n',f:`SUM(${colLetter(colActWk)}${firstResRow}:${colLetter(colActWk)}${lastResRow})`,s:totalStyle};
+  ws[colLetter(colPD)+totalExRow]={t:'n',f:`SUM(${colLetter(colPD)}${firstResRow}:${colLetter(colPD)}${lastResRow})`,s:totalStyle};
+  ws[colLetter(colRev)+totalExRow]={t:'n',f:`SUM(${colLetter(colRev)}${firstResRow}:${colLetter(colRev)}${lastResRow})`,s:totalStyleRight};
+  ws[colLetter(colCst)+totalExRow]={t:'n',f:`SUM(${colLetter(colCst)}${firstResRow}:${colLetter(colCst)}${lastResRow})`,s:totalStyleRight};
+
+  // ── MARGIN row ──
+  const totalRevCell=colLetter(colRev)+totalExRow;
+  const totalCstCell=colLetter(colCst)+totalExRow;
+  const {rev:gRev,cst:gCst}=calcGrand(weeks);
+  const marginVal=gRev>0?((gRev-gCst)/gRev):0;
+  const mColor=marginVal>=0.4?greenHex:marginVal>=0.2?orangeHex:redHex;
+
+  ws[colLetter(colPD)+marginExRow]={t:'s',v:'Margin %',s:{font:{name:'Sora',sz:8,bold:true,color:{rgb:'6B7A99'}},alignment:{horizontal:'right'},border}};
+  ws[colLetter(colRev)+marginExRow]={t:'n',f:`IF(${totalRevCell}=0,0,(${totalRevCell}-${totalCstCell})/${totalRevCell})`,s:{fill:{fgColor:{rgb:mColor}},font:{name:'DM Mono',sz:10,bold:true,color:{rgb:'FFFFFF'}},numFmt:'0.00%',alignment:{horizontal:'center'},border}};
+
+  // ── Merges ──
+  const merges=[];
+  merges.push({s:{r:0,c:0},e:{r:0,c:3}});
+  let phColStart=firstWkCol;
+  groups.forEach(g=>{
+    if(g.count>1) merges.push({s:{r:0,c:phColStart},e:{r:0,c:phColStart+g.count-1}});
+    phColStart+=g.count;
+  });
+  if(colCst>lastWkCol+1) merges.push({s:{r:0,c:colActWk},e:{r:0,c:colCst}});
+  // Total row: merge A through D
+  merges.push({s:{r:totalExRow-1,c:0},e:{r:totalExRow-1,c:3}});
+  ws['!merges']=merges;
+
+  // ── Column widths (vary by view mode) ──
+  const colW=vm==='days'?7:vm==='months'?14:11;
+  const colWidths=[{wch:16},{wch:11},{wch:10},{wch:10}];
+  for(let i=0;i<N;i++) colWidths.push({wch:colW});
+  colWidths.push({wch:10},{wch:12},{wch:14},{wch:14});
+  ws['!cols']=colWidths;
+  ws['!rows']=[{hpt:26},{hpt:32}];
+
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:data.length-1,c:totalCols-1}});
+  XLSX.utils.book_append_sheet(wb,ws,'Resource Loading ('+viewLabel+')');
+
+  // ═══ Sheet 2: Executive Summary (styled) ═══
+  const {days,rev,cst}=calcGrand(weeks);
+  const margin=rev>0?((rev-cst)/rev*100):0;
+  const sumRows=[
+    ['PROJECT SUMMARY'],
+    ['Project Name',state.projectName||'Untitled'],
+    ['Start Date',getStartDate()?fmtDateFull(getStartDate()):''],
+    ['End Date',calcEndDate()?fmtDateFull(calcEndDate()):''],
+    ['Total Weeks',totalPhaseWeeks()],
+    ['Budget',getBudget()||'Not set'],
+    ['Total Person Days',days],
+    ['Total Revenue',rev],
+    ['Total Cost',cst],
+    ['Margin %',margin.toFixed(2)+'%'],
+    [],
+    ['PHASE PLAN'],
+    ['Phase','Weeks','Start','End']
+  ];
+  let cumDays=0;
+  const sd=getStartDate();
+  state.phases.forEach(p=>{
+    const pStart=sd?new Date(sd.getTime()+cumDays*7*86400000):null;
+    cumDays+=parseInt(p.weeks)||0;
+    const pEnd=sd?new Date(sd.getTime()+(cumDays*7-1)*86400000):null;
+    sumRows.push([p.name,p.weeks,pStart?fmtDateFull(pStart):'',pEnd?fmtDateFull(pEnd):'']);
+  });
+  sumRows.push([],['TEAM COMPOSITION'],['Role','Location','Rate/Hr','Cost/Hr','Person Days','Revenue','Cost']);
+  state.resources.forEach(r=>{
+    const c=calcRes(r,weeks);
+    sumRows.push([r.role,r.location,r.rate,r.cost,c.days,c.rev,c.cst]);
+  });
+
+  const ws2=XLSX.utils.aoa_to_sheet(sumRows);
+  // Style summary headers
+  sty2('A1',{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:12,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center'}});
+  function sty2(addr,style){ if(!ws2[addr]) ws2[addr]={t:'s',v:''}; ws2[addr].s=style; }
+  // Section headers
+  ['A12','A17'].forEach(a=>sty2(a,{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:10,bold:true,color:{rgb:navyFg}}}));
+  ['A13','B13','C13','D13'].forEach(a=>sty2(a,{fill:{fgColor:{rgb:'E8EEFB'}},font:sFontBold,border}));
+  const teamHdrRow=sumRows.findIndex(r=>r[0]==='Role')+1;
+  if(teamHdrRow>0){
+    ['A','B','C','D','E','F','G'].forEach(c=>sty2(c+teamHdrRow,{fill:{fgColor:{rgb:'E8EEFB'}},font:sFontBold,border}));
+  }
+  // Label cells
+  for(let r=2;r<=10;r++){
+    sty2('A'+r,{font:sFontBold,border});
+    sty2('B'+r,{font:monoFont,border,numFmt:r>=8?'$#,##0.00':'General'});
+  }
+
+  ws2['!cols']=[{wch:20},{wch:16},{wch:16},{wch:16},{wch:12},{wch:14},{wch:14}];
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Executive Summary');
+
+  // ═══ Sheet 3: Timeline (styled) ═══
+  const tlRows=[['Week','Date','Phase','Resources Active','Week Revenue','Week Cost']];
+  weeks.forEach(wk=>{
+    let wRev=0,wCst=0,wRes=0;
+    state.resources.forEach(r=>{
+      const v=r.allocations[wk.key]??0;
+      if(v>0){ wRes++; wRev+=v*5*8*r.rate; wCst+=v*5*8*r.cost; }
+    });
+    tlRows.push([wk.label,wk.date,wk.phase,wRes,wRev,wCst]);
+  });
+  const ws3=XLSX.utils.aoa_to_sheet(tlRows);
+  // Style header row
+  function sty3(addr,style){ if(!ws3[addr]) ws3[addr]={t:'s',v:''}; ws3[addr].s=style; }
+  ['A1','B1','C1','D1','E1','F1'].forEach(a=>sty3(a,{fill:{fgColor:{rgb:navyBg}},font:{name:'Sora',sz:9,bold:true,color:{rgb:navyFg}},alignment:{horizontal:'center'},border}));
+  // Style data rows with phase colors
+  tlRows.forEach((row,ri)=>{
+    if(ri===0) return;
+    const wk=weeks[ri-1];
+    if(!wk) return;
+    const pc=wk.phColor;
+    sty3('C'+(ri+1),{fill:{fgColor:{rgb:phBg[pc]||phBg.other}},font:{name:'Sora',sz:8,bold:true,color:{rgb:phFg[pc]||phFg.other}},border});
+    sty3('E'+(ri+1),{font:monoFont,numFmt:'$#,##0.00',border});
+    sty3('F'+(ri+1),{font:monoFont,numFmt:'$#,##0.00',border});
+  });
+  ws3['!cols']=[{wch:8},{wch:14},{wch:22},{wch:15},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Timeline');
+
+  const fname=(state.projectName||'RLS').replace(/[^a-zA-Z0-9_-]/g,'_')+'_ResourceLoading.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
+// ═══════════════════════════════════════════
+//  EDIT RESOURCE MODAL
+// ═══════════════════════════════════════════
+function openEditModal(id){
+  const r=state.resources.find(r=>r.id===id); if(!r) return;
+  document.getElementById('editResId').value=id;
+  document.getElementById('eRole').value=r.role;
+  document.getElementById('eLoc').value=r.location;
+  document.getElementById('eRate').value=r.rate;
+  document.getElementById('eCost').value=r.cost;
+  document.getElementById('eOnboard').value=r.onboardDate||'';
+  // Determine dominant allocation for default
+  const weeks=getWeeks();
+  const vals=weeks.map(wk=>r.allocations[wk.key]??0).filter(v=>v>0);
+  const dominant=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:1;
+  document.getElementById('eAlloc').value=Math.round(dominant*10)/10;
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal(){
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function saveEditResource(){
+  const id=parseInt(document.getElementById('editResId').value);
+  const r=state.resources.find(r=>r.id===id); if(!r) return;
+
+  const oldRole=r.role, oldLoc=r.location;
+  r.role=document.getElementById('eRole').value;
+  r.location=document.getElementById('eLoc').value;
+  r.rate=parseFloat(document.getElementById('eRate').value)||r.rate;
+  r.cost=parseFloat(document.getElementById('eCost').value)||r.cost;
+  r.onboardDate=document.getElementById('eOnboard').value||null;
+  const newAlloc=parseFloat(document.getElementById('eAlloc').value)||1;
+
+  // If role or location changed, auto-update rates from master
+  if((r.role!==oldRole||r.location!==oldLoc)&&MR[r.role]?.[r.location]){
+    r.rate=MR[r.role][r.location].rate;
+    r.cost=MR[r.role][r.location].cost;
+  }
+
+  // Update allocations: apply new default alloc to all active weeks, respect onboard date
+  const weeks=getWeeks();
+  const projStart=getStartDate();
+  const onboard=r.onboardDate?new Date(r.onboardDate+'T00:00:00'):null;
+  weeks.forEach((wk,wi)=>{
+    const wkStart=new Date(projStart.getTime()+wi*7*86400000);
+    if(onboard&&wkStart<onboard){
+      r.allocations[wk.key]=0;
+    } else {
+      r.allocations[wk.key]=newAlloc;
+    }
+  });
+
+  closeEditModal();
+  render();
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click',function(e){
+  if(e.target===this) closeEditModal();
+});
+
+// ═══════════════════════════════════════════
+//  INTELLIGENT SUGGESTIONS
+// ═══════════════════════════════════════════
+function renderSuggestions(weeks){
+  const card=document.getElementById('suggestCard');
+  const list=document.getElementById('suggestList');
+  const budget=getBudget();
+  const {days,rev,cst}=calcGrand(weeks);
+  const margin=rev>0?((rev-cst)/rev*100):0;
+  const totalWks=totalPhaseWeeks();
+  const suggestions=[];
+
+  if(state.resources.length===0||!getStartDate()){
+    card.style.display='none'; return;
+  }
+
+  // 1. Budget analysis
+  if(budget>0){
+    const diff=budget-rev;
+    const pct=(rev/budget*100).toFixed(1);
+
+    if(diff<0){
+      const overAmt=Math.abs(diff);
+      const weeklyBurn=totalWks>0?rev/totalWks:0;
+      const weeksTocut=weeklyBurn>0?Math.ceil(overAmt/weeklyBurn):0;
+      suggestions.push({type:'danger',icon:'🚨',text:`<strong>Over budget by ${fmt$(overAmt)}</strong> (${pct}% of budget). Consider reducing ${weeksTocut} week(s) of effort, switching Onsite resources to Offshore, or lowering allocations. Use <em>Fit to Budget</em> for auto-adjustment.`});
+
+      // Specific: identify most expensive resource
+      let maxRes=null,maxRev=0;
+      state.resources.forEach(r=>{const c=calcRes(r,weeks);if(c.rev>maxRev){maxRev=c.rev;maxRes=r;}});
+      if(maxRes){
+        suggestions.push({type:'warn',icon:'💡',text:`<strong>${maxRes.role} (${maxRes.location})</strong> is your highest-cost resource at ${fmt$(maxRev)}. Reducing their allocation by 50% saves ~${fmt$(maxRev*0.5)}.`});
+      }
+
+      // Suggest offshore swap
+      const onsiteRes=state.resources.filter(r=>r.location==='Onsite');
+      if(onsiteRes.length>0){
+        const potentialSaving=onsiteRes.reduce((s,r)=>{
+          const c=calcRes(r,weeks);
+          const offRate=MR[r.role]?.Offshore?.rate||r.rate*0.4;
+          return s+(c.rev - c.days*8*offRate);
+        },0);
+        if(potentialSaving>0)
+          suggestions.push({type:'info',icon:'🌐',text:`Moving ${onsiteRes.length} Onsite resource(s) to Offshore could save up to <strong>${fmt$(potentialSaving)}</strong> in revenue cost.`});
+      }
+
+    } else if(diff>0 && diff/budget>0.25){
+      const weeklyBurn=totalWks>0?rev/totalWks:0;
+      const extraWks=weeklyBurn>0?Math.floor(diff/weeklyBurn):0;
+      suggestions.push({type:'success',icon:'✅',text:`<strong>${fmt$(diff)} under budget</strong> (${pct}% utilized). You have room for ~${extraWks} additional week(s) at current burn rate, or could add more resources.`});
+
+      // Suggest adding QA or testing
+      const hasQA=state.resources.some(r=>r.role==='QA');
+      if(!hasQA)
+        suggestions.push({type:'info',icon:'🧪',text:`No QA resource allocated. With surplus budget, consider adding a <strong>QA</strong> resource to improve quality coverage.`});
+
+    } else if(diff>=0){
+      suggestions.push({type:'success',icon:'👍',text:`Budget is <strong>${pct}% utilized</strong> — well aligned. Remaining: ${fmt$(diff)}.`});
+    }
+  }
+
+  // 2. Margin health
+  if(rev>0){
+    if(margin<15){
+      suggestions.push({type:'danger',icon:'📉',text:`<strong>Margin is critically low at ${margin.toFixed(1)}%.</strong> Target at least 25-30%. Consider increasing rates or reducing cost by switching locations.`});
+    } else if(margin<25){
+      suggestions.push({type:'warn',icon:'⚠️',text:`Margin at <strong>${margin.toFixed(1)}%</strong> is below the recommended 25-30% threshold. Review cost structure.`});
+    } else if(margin>=40){
+      suggestions.push({type:'success',icon:'📈',text:`Healthy margin of <strong>${margin.toFixed(1)}%</strong>. Strong profitability position.`});
+    }
+  }
+
+  // 3. Team composition checks
+  const roles=state.resources.map(r=>r.role);
+  if(!roles.includes('TPM')&&state.resources.length>=3)
+    suggestions.push({type:'warn',icon:'👔',text:`No <strong>TPM</strong> assigned. Projects with 3+ resources typically need a Technical Project Manager.`});
+  if(!roles.includes('Architect')&&state.resources.length>=4)
+    suggestions.push({type:'info',icon:'🏗️',text:`Consider adding an <strong>Architect</strong> for technical governance on a team of ${state.resources.length} resources.`});
+
+  // 4. Resource utilization
+  state.resources.forEach(r=>{
+    const {activeWks}=calcRes(r,weeks);
+    if(totalWks>0 && activeWks/totalWks<0.3)
+      suggestions.push({type:'warn',icon:'⏳',text:`<strong>${r.role} (${r.location})</strong> is active only ${activeWks} of ${totalWks} weeks (${(activeWks/totalWks*100).toFixed(0)}%). Consider if this resource is needed for the full project.`});
+  });
+
+  // 5. Timeline check
+  if(totalWks>0&&totalWks<=2&&state.resources.length>3)
+    suggestions.push({type:'warn',icon:'⏱️',text:`Very short timeline (${totalWks} weeks) with ${state.resources.length} resources. Ensure scope is realistic or extend the timeline.`});
+
+  // Render
+  if(suggestions.length===0){
+    card.style.display='none'; return;
+  }
+  card.style.display='block';
+  list.innerHTML=suggestions.map(s=>`
+    <li class="suggest-item si-${s.type}">
+      <span class="si-icon">${s.icon}</span>
+      <span class="si-text">${s.text}</span>
+    </li>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+renderPhases();
+renderRatesTable();
+refreshRoleDropdowns();
+render();
+</script>
+</body>
+</html>
