@@ -128,6 +128,8 @@
   .rls th,.rls td{border:1px solid var(--border);}
 
   /* Phase header bands */
+  .ph-disc   {background:#E0F2FE;color:#0C4A6E;}
+  .ph-design {background:#FCE7F3;color:#831843;}
   .ph-dev    {background:#ccd9f5;color:#1a3a7a;}
   .ph-test   {background:#fde6a0;color:#6a3e00;}
   .ph-uat    {background:#b8e8c0;color:#0e4a22;}
@@ -135,6 +137,8 @@
   .ph-other  {background:#d4d4d4;color:#333;}
 
   /* Week sub-headers */
+  .wk-sub-disc   {background:#F0F9FF;}
+  .wk-sub-design {background:#FDF2F8;}
   .wk-sub-dev    {background:#e8effc;}
   .wk-sub-test   {background:#fff8e6;}
   .wk-sub-uat    {background:#e8f7eb;}
@@ -205,6 +209,8 @@
   .gantt-table th,.gantt-table td{border:1px solid var(--border);padding:6px 8px;}
   .gantt-table th{background:var(--navy);color:white;font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
   .gantt-bar{height:18px;border-radius:3px;min-width:4px;}
+  .gantt-bar-disc{background:linear-gradient(90deg,#0284C7,#38BDF8);}
+  .gantt-bar-design{background:linear-gradient(90deg,#BE185D,#F472B6);}
   .gantt-bar-dev{background:linear-gradient(90deg,#3b6fd4,#5a8af0);}
   .gantt-bar-test{background:linear-gradient(90deg,#e8960a,#f5b742);}
   .gantt-bar-uat{background:linear-gradient(90deg,#1d9e60,#3cc47a);}
@@ -216,6 +222,8 @@
   .phase-flag-col .flag-icon{font-size:1.1rem;}
   @keyframes flagWave{0%,100%{transform:translateY(0);filter:brightness(1);}50%{transform:translateY(-3px);filter:brightness(1.05);}}
   @keyframes flagFlutter{0%{transform:rotate(-12deg) scale(1);}100%{transform:rotate(12deg) scale(1.1);}}
+  .flag-disc{background:linear-gradient(135deg,#E0F2FE,#BAE6FD);color:#0C4A6E;border:2px solid #0284C7;box-shadow:0 2px 8px rgba(2,132,199,.25);}
+  .flag-design{background:linear-gradient(135deg,#FCE7F3,#FBCFE8);color:#831843;border:2px solid #BE185D;box-shadow:0 2px 8px rgba(190,24,93,.25);}
   .flag-dev{background:linear-gradient(135deg,#ccd9f5,#e0eaff);color:#1a3a7a;border:2px solid #7a9fd4;box-shadow:0 2px 8px rgba(59,111,212,.25);}
   .flag-test{background:linear-gradient(135deg,#fde6a0,#fff3d0);color:#6a3e00;border:2px solid #d4a030;box-shadow:0 2px 8px rgba(232,150,10,.25);}
   .flag-uat{background:linear-gradient(135deg,#b8e8c0,#d8f5dc);color:#0e4a22;border:2px solid #5cb878;box-shadow:0 2px 8px rgba(29,158,96,.25);}
@@ -511,6 +519,7 @@
         <button onclick="setGanttView('days')">Days</button>
         <button onclick="setGanttView('months')">Months</button>
       </div>
+      <button class="btn btn-export btn-sm" onclick="exportGanttSVG()" style="margin-left:auto;font-size:.62rem;" title="Export as SVG for PowerPoint">Export SVG</button>
     </div>
     <div class="gantt-wrap" id="ganttWrap"></div>
   </div>
@@ -604,7 +613,7 @@ const MR = {
 };
 
 // Phase color mapping
-const PH_COLORS = ['dev','test','uat','golive','other'];
+const PH_COLORS = ['disc','design','dev','test','uat','golive','other'];
 function phColor(idx){ return PH_COLORS[Math.min(idx, PH_COLORS.length-1)]; }
 
 // ═══════════════════════════════════════════
@@ -613,6 +622,8 @@ function phColor(idx){ return PH_COLORS[Math.min(idx, PH_COLORS.length-1)]; }
 const state = {
   projectName: '',
   phases: [
+    {id:'p0', name:'Discovery',          weeks:1},
+    {id:'p0b',name:'Design',            weeks:1},
     {id:'p1', name:'Development',       weeks:2},
     {id:'p2', name:'TEST',              weeks:1},
     {id:'p3', name:'UAT',               weeks:1},
@@ -1284,7 +1295,9 @@ function render(){
     empty.innerHTML=!getStartDate()
       ?'<div class="empty-icon">📅</div><p>Set a <strong>Start Date</strong> to activate the timeline</p>'
       :'<div class="empty-icon">👤</div><p>Add resources using the form above</p>';
-    document.getElementById('ganttCard').style.display='none';
+    // Still render Gantt if we have start date + phases (it's phase-based)
+    if(getStartDate()&&weeks.length>0) renderGantt(weeks);
+    else document.getElementById('ganttCard').style.display='none';
     return;
   }
   empty.style.display='none'; table.style.display='';
@@ -1597,138 +1610,150 @@ function setGanttView(mode){
 function renderGantt(weeks){
   const card=document.getElementById('ganttCard');
   const wrap=document.getElementById('ganttWrap');
-  if(!weeks.length||state.resources.length===0){ card.style.display='none'; return; }
+  if(!weeks.length||state.phases.length===0){ card.style.display='none'; return; }
   card.style.display='block';
 
   const start=getStartDate();
-  const gvm=ganttViewMode;
-  let cols=[]; // {label, sub, phColor, phase, wkKeys:[]}
+  const totalW=totalPhaseWeeks();
 
-  if(gvm==='days'){
-    weeks.forEach((wk,wi)=>{
-      const wkDate=new Date(start.getTime()+wi*7*86400000);
-      for(let d=0;d<5;d++){
-        const dd=new Date(wkDate.getTime()+d*86400000);
-        cols.push({label:dd.toLocaleDateString('en-US',{weekday:'short'}),sub:fmtDateShort(dd),phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key],dayFrac:1/5});
-      }
-    });
-  } else if(gvm==='months'){
-    weeks.forEach((wk,wi)=>{
-      const wkDate=new Date(start.getTime()+wi*7*86400000);
-      const m=wkDate.toLocaleDateString('en-US',{month:'short',year:'numeric'});
-      if(!cols.length||cols[cols.length-1].label!==m)
-        cols.push({label:m,sub:'',phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]});
-      else
-        cols[cols.length-1].wkKeys.push(wk.key);
-    });
-  } else {
-    weeks.forEach(wk=>cols.push({label:wk.label,sub:wk.date,phColor:wk.phColor,phase:wk.phase,wkKeys:[wk.key]}));
-  }
+  // Colors
+  const barSolid={disc:'#0284C7',design:'#BE185D',dev:'#3b6fd4',test:'#e8960a',uat:'#1d9e60',golive:'#7c3aed',other:'#6b7280'};
+  const barLight={disc:'#38BDF8',design:'#F472B6',dev:'#5a8af0',test:'#f5b742',uat:'#3cc47a',golive:'#a78bfa',other:'#9ca3af'};
+  const flagFg={disc:'#0C4A6E',design:'#831843',dev:'#1a3a7a',test:'#6a3e00',uat:'#0e4a22',golive:'#3c1a68',other:'#333'};
 
-  // Phase groups for header band
-  const groups=[];
-  cols.forEach(c=>{
-    if(!groups.length||groups[groups.length-1].phase!==c.phase)
-      groups.push({phase:c.phase,color:c.phColor,count:0});
-    groups[groups.length-1].count++;
+  // Build phases
+  const phases=[];
+  let cumWk=0;
+  state.phases.forEach((p,pi)=>{
+    const wks=parseInt(p.weeks)||0;
+    const pStart=new Date(start.getTime()+cumWk*7*86400000);
+    cumWk+=wks;
+    const pEnd=new Date(start.getTime()+(cumWk*7-1)*86400000);
+    phases.push({name:p.name,weeks:wks,startWk:cumWk-wks,endWk:cumWk,startDate:pStart,endDate:pEnd,color:phColor(pi),idx:pi});
   });
 
-  const phHdr=groups.map(g=>`<th class="ph-${g.color}" colspan="${g.count}" style="padding:5px 6px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border:1px solid rgba(0,0,0,.1)">${esc(g.phase)}</th>`).join('');
+  // Milestone icons for key phases
+  const milestoneMap={};
+  phases.forEach(p=>{
+    const nl=p.name.toLowerCase();
+    if(nl.includes('develop'))  milestoneMap[p.idx]='🏁';
+    if(nl.includes('uat'))      milestoneMap[p.idx]='✅';
+    if(nl.includes('go-live')||nl.includes('golive')||nl.includes('production')||nl.includes('hypercare'))
+      milestoneMap[p.idx]='🚀';
+  });
 
-  const colHdr=cols.map(c=>`<th class="wk-sub-${c.phColor}" style="padding:4px 3px;font-size:.58rem;min-width:${gvm==='days'?'28px':gvm==='months'?'60px':'38px'};text-align:center;"><span style="font-weight:700;display:block;font-size:${gvm==='days'?'.5rem':'.58rem'}">${c.label}</span>${c.sub?`<span style="font-size:.52rem;color:#8090a8;">${c.sub}</span>`:''}</th>`).join('');
+  // ── Measure container width and compute layout to fill it ──
+  const containerW=wrap.clientWidth||900;
+  const labelW=Math.round(containerW*0.18);
+  const gridW=containerW-labelW;
+  const colW=gridW/totalW;
+  const headerH=62, phRowH=48, footerH=38, legendH=42;
+  const svgW=containerW;
+  const svgH=headerH+phases.length*phRowH+footerH+legendH;
 
-  // Resource rows with Gantt bars
-  let rows='';
-  state.resources.forEach(r=>{
-    let cells='';
-    if(gvm==='days'){
-      cells=cols.map(c=>{
-        const v=r.allocations[c.wkKeys[0]]??0;
-        if(v===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
-        const barClass='gantt-bar-'+c.phColor;
-        const opacity=v<1?'opacity:.55;':'';
-        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}height:14px;" title="${r.role}: ${v}"></div></td>`;
-      }).join('');
-    } else if(gvm==='months'){
-      cells=cols.map(c=>{
-        const totalAlloc=c.wkKeys.reduce((s,k)=>s+(r.allocations[k]??0),0);
-        const avg=totalAlloc/c.wkKeys.length;
-        if(avg===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
-        const barClass='gantt-bar-'+c.phColor;
-        const opacity=avg<0.75?'opacity:.55;':'';
-        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}" title="${r.role}: avg ${avg.toFixed(1)}"></div></td>`;
-      }).join('');
-    } else {
-      cells=cols.map(c=>{
-        const v=r.allocations[c.wkKeys[0]]??0;
-        if(v===0) return '<td class="gantt-cell" style="background:#f8f9fb;"></td>';
-        const barClass='gantt-bar-'+c.phColor;
-        const opacity=v<1?'opacity:.55;':'';
-        return `<td class="gantt-cell"><div class="gantt-bar ${barClass}" style="${opacity}" title="${r.role} - ${c.label}: ${v}"></div></td>`;
-      }).join('');
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" font-family="Segoe UI,Sora,Arial,sans-serif">
+  <defs>
+    ${phases.map(p=>`<linearGradient id="grad-${p.color}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${barSolid[p.color]}"/><stop offset="100%" stop-color="${barLight[p.color]}"/></linearGradient>`).join('\n    ')}
+  </defs>
+  <style>
+    @keyframes msPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    .ms-i{animation:msPulse 2s ease-in-out infinite;}
+  </style>`;
+
+  // Background
+  svg+=`<rect width="${svgW}" height="${svgH}" fill="#F8FAFC"/>`;
+
+  // ═══ HEADER ═══
+  svg+=`<rect x="0" y="0" width="${labelW}" height="${headerH}" fill="#1A2744"/>`;
+  svg+=`<text x="${labelW/2}" y="26" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">PHASE</text>`;
+  svg+=`<text x="${labelW/2}" y="42" text-anchor="middle" fill="#8090a8" font-size="8">Timeline</text>`;
+
+  // Phase header bands + week labels
+  phases.forEach(p=>{
+    const x=labelW+p.startWk*colW;
+    const w=p.weeks*colW;
+    svg+=`<rect x="${x}" y="0" width="${w}" height="30" fill="${barSolid[p.color]}" opacity="0.15"/>`;
+    svg+=`<rect x="${x}" y="0" width="${w}" height="30" fill="none" stroke="${barSolid[p.color]}" stroke-width="1" opacity="0.3"/>`;
+    svg+=`<text x="${x+w/2}" y="18" text-anchor="middle" fill="${flagFg[p.color]}" font-size="${w<80?7:9}" font-weight="700" letter-spacing="0.3">${esc(p.name).toUpperCase()}</text>`;
+    for(let i=0;i<p.weeks;i++){
+      const wx=labelW+(p.startWk+i)*colW;
+      const wDate=new Date(start.getTime()+(p.startWk+i)*7*86400000);
+      svg+=`<text x="${wx+colW/2}" y="44" text-anchor="middle" fill="#4a5a80" font-size="8" font-weight="600">W${p.startWk+i+1}</text>`;
+      svg+=`<text x="${wx+colW/2}" y="56" text-anchor="middle" fill="#8090a8" font-size="7">${fmtDateShort(wDate)}</text>`;
+      // Vertical grid line
+      if(i>0) svg+=`<line x1="${wx}" y1="30" x2="${wx}" y2="${svgH-legendH}" stroke="#E2E8F0" stroke-width="0.5"/>`;
     }
-
-    const {days,rev}=calcRes(r,weeks);
-    rows+=`<tr>
-      <td style="padding:6px 10px;white-space:nowrap;"><span class="gantt-role">${esc(r.role)}</span><br><span class="gantt-loc">${r.location} &middot; ${days}d &middot; ${fmt$(rev)}</span></td>
-      ${cells}
-    </tr>`;
+    // Phase separator (heavier line)
+    svg+=`<line x1="${x}" y1="30" x2="${x}" y2="${svgH-legendH}" stroke="#CBD5E1" stroke-width="1"/>`;
   });
+  // Right edge
+  svg+=`<line x1="${svgW-1}" y1="30" x2="${svgW-1}" y2="${svgH-legendH}" stroke="#CBD5E1" stroke-width="1"/>`;
 
-  // Phase completion flags
-  let milestones='';
-  let cumCol=0;
-  const flagIcons=['🏁','🚩','🎯','⛳','�'];
-  groups.forEach((g,gi)=>{
-    cumCol+=g.count;
-    const icon=flagIcons[gi%flagIcons.length];
-    milestones+=`<tr class="milestone-row">
-      <td style="padding:8px 10px;">
-        <span class="phase-flag flag-${g.color}">
-          <span class="flag-icon">${icon}</span>
-          ${esc(g.phase)} Complete
-        </span>
-      </td>`;
-    for(let c=0;c<cols.length;c++){
-      if(c===cumCol-1){
-        milestones+=`<td style="text-align:center;padding:6px;">
-          <span class="phase-flag phase-flag-col flag-${g.color}">
-            <span class="flag-icon">${icon}</span>
-          </span>
-        </td>`;
-      } else {
-        milestones+='<td style="border-bottom:2px dashed '+({dev:'#7a9fd4',test:'#d4a030',uat:'#5cb878',golive:'#9a6ed0',other:'#999'}[g.color]||'#ccc')+';"></td>';
-      }
+  // ═══ PHASE ROWS ═══
+  const barsY=headerH;
+  phases.forEach((p,pi)=>{
+    const rowY=barsY+pi*phRowH;
+    // Row background
+    svg+=`<rect x="0" y="${rowY}" width="${svgW}" height="${phRowH}" fill="${pi%2===0?'#FFFFFF':'#F8FAFC'}"/>`;
+    svg+=`<line x1="0" y1="${rowY+phRowH}" x2="${svgW}" y2="${rowY+phRowH}" stroke="#E2E8F0" stroke-width="0.5"/>`;
+
+    // Label
+    svg+=`<text x="10" y="${rowY+22}" fill="${flagFg[p.color]}" font-size="11" font-weight="700">${esc(p.name)}</text>`;
+    svg+=`<text x="10" y="${rowY+36}" fill="#8090a8" font-size="7.5">${p.weeks}wk · ${fmtDateShort(p.startDate)} – ${fmtDateShort(p.endDate)}</text>`;
+
+    // Bar
+    const bx=labelW+p.startWk*colW+2;
+    const bw=p.weeks*colW-4;
+    const by=rowY+11;
+    const bh=phRowH-22;
+    svg+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="4" fill="url(#grad-${p.color})"/>`;
+    svg+=`<rect x="${bx}" y="${by}" width="${bw}" height="${Math.round(bh/2)}" rx="4" fill="#fff" opacity="0.12"/>`;
+    // Duration text centered on bar
+    svg+=`<text x="${bx+bw/2}" y="${by+bh/2+4}" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">${p.weeks} week${p.weeks>1?'s':''}</text>`;
+
+    // Milestone icon at right edge of bar (inside)
+    const msEmoji=milestoneMap[p.idx];
+    if(msEmoji){
+      svg+=`<text x="${bx+bw-22}" y="${by+bh/2+7}" font-size="20">${msEmoji}</text>`;
     }
-    milestones+='</tr>';
   });
 
-  // Grand total row
+  // ═══ FOOTER ═══
+  const ftY=barsY+phases.length*phRowH;
   const {days:gDays,rev:gRev,cst:gCst}=calcGrand(weeks);
   const gMargin=gRev>0?((gRev-gCst)/gRev*100).toFixed(1):0;
+  svg+=`<rect x="0" y="${ftY}" width="${svgW}" height="${footerH}" fill="#1A2744"/>`;
+  svg+=`<text x="12" y="${ftY+24}" fill="#fff" font-size="10" font-weight="700">TOTAL: ${totalW} weeks · ${gDays} person-days · Rev ${fmt$(gRev)} · Cost ${fmt$(gCst)} · Margin ${gMargin}%</text>`;
 
-  wrap.innerHTML=`
-    <table class="gantt-table">
-      <thead>
-        <tr><th style="min-width:160px;"></th>${phHdr}</tr>
-        <tr><th style="text-align:left;padding:5px 10px;">Resource</th>${colHdr}</tr>
-      </thead>
-      <tbody>
-        ${rows}
-        ${milestones}
-      </tbody>
-      <tfoot>
-        <tr style="background:var(--navy);color:white;font-weight:700;font-size:.68rem;">
-          <td style="padding:8px 10px;border-color:#2d3f6b;">TOTAL: ${gDays} days &middot; Rev ${fmt$(gRev)} &middot; Cost ${fmt$(gCst)} &middot; Margin ${gMargin}%</td>
-          <td colspan="${cols.length}" style="border-color:#2d3f6b;"></td>
-        </tr>
-      </tfoot>
-    </table>
-    <div class="gantt-legend">
-      ${groups.map(g=>`<div class="gantt-legend-item"><div class="gantt-legend-color gantt-bar-${g.color}"></div>${esc(g.phase)}</div>`).join('')}
-      <div class="gantt-legend-item" style="margin-left:auto;font-style:italic;">Lighter bars = partial allocation</div>
-    </div>
-  `;
+  // ═══ LEGEND ═══
+  const lgY=ftY+footerH+10;
+  let lgX=12;
+  phases.forEach(p=>{
+    svg+=`<rect x="${lgX}" y="${lgY}" width="14" height="10" rx="2" fill="url(#grad-${p.color})"/>`;
+    svg+=`<text x="${lgX+18}" y="${lgY+9}" fill="#6B7A99" font-size="8">${esc(p.name)}</text>`;
+    lgX+=esc(p.name).length*5.5+32;
+  });
+
+  svg+=`</svg>`;
+  wrap.innerHTML=svg;
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT GANTT AS SVG
+// ═══════════════════════════════════════════
+function exportGanttSVG(){
+  const svgEl=document.querySelector('#ganttWrap svg');
+  if(!svgEl){alert('No timeline to export. Generate the timeline first.');return;}
+  const svgData=new XMLSerializer().serializeToString(svgEl);
+  const blob=new Blob([svgData],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=(state.projectName||'Executive_Timeline').replace(/[^a-zA-Z0-9_-]/g,'_')+'.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ═══════════════════════════════════════════
@@ -1774,9 +1799,9 @@ function exportToExcel(){
   const viewLabel=vm==='days'?'Days':vm==='months'?'Months':'Weeks';
 
   // ── Color maps matching the HTML UI ──
-  const phBg={dev:'CCD9F5',test:'FDE6A0',uat:'B8E8C0',golive:'DBC8F5',other:'D4D4D4'};
-  const phFg={dev:'1A3A7A',test:'6A3E00',uat:'0E4A22',golive:'3C1A68',other:'333333'};
-  const wkSubBg={dev:'E8EEFB',test:'FEF5DC',uat:'E5F5E8',golive:'F0E8FB',other:'EBEBEB'};
+  const phBg={disc:'E0F2FE',design:'FCE7F3',dev:'CCD9F5',test:'FDE6A0',uat:'B8E8C0',golive:'DBC8F5',other:'D4D4D4'};
+  const phFg={disc:'0C4A6E',design:'831843',dev:'1A3A7A',test:'6A3E00',uat:'0E4A22',golive:'3C1A68',other:'333333'};
+  const wkSubBg={disc:'F0F9FF',design:'FDF2F8',dev:'E8EEFB',test:'FEF5DC',uat:'E5F5E8',golive:'F0E8FB',other:'EBEBEB'};
   const navyBg='1A2744', navyFg='FFFFFF';
   const acBg0='F0F2F8', acBg05='A8C4F0', acBg1='3B6FD4';
   const revBg='EDF2FF', revFg='1A3A8A', cstBg='FFF8ED', cstFg='7A4000';
